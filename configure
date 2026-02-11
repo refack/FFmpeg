@@ -7118,50 +7118,45 @@ fi
 # check for some common methods of building with pthread support
 # do this before the optional library checks as some of them require pthreads
 if ! disabled pthreads && ! enabled w32threads && ! enabled os2threads; then
-    if check_lib pthreads pthread.h pthread_join   -pthread &&
-       check_lib pthreads pthread.h pthread_create -pthread; then
-        add_allcflags -pthread
-    elif check_lib pthreads pthread.h pthread_join   -pthreads &&
-         check_lib pthreads pthread.h pthread_create -pthreads; then
-        add_allcflags -pthreads
-    elif check_lib pthreads pthread.h pthread_join   -ldl -pthread &&
-         check_lib pthreads pthread.h pthread_create -ldl -pthread; then
-        add_allcflags -ldl -pthread
-    elif check_lib pthreads pthread.h pthread_join   -lpthreadGC2 &&
-         check_lib pthreads pthread.h pthread_create -lpthreadGC2; then
-        :
-    elif check_lib pthreads pthread.h pthread_join   -lpthread &&
-         check_lib pthreads pthread.h pthread_create -lpthread; then
-        :
-    elif check_func pthread_join && check_func pthread_create; then
-        enable pthreads
-    fi
-    check_cc pthreads "pthread.h" "static pthread_mutex_t atomic_lock = PTHREAD_MUTEX_INITIALIZER"
+    enable pthreads
+    # if check_lib pthreads pthread.h pthread_join   -pthread &&
+    #    check_lib pthreads pthread.h pthread_create -pthread; then
+    #     add_allcflags -pthread
+    # elif check_lib pthreads pthread.h pthread_join   -pthreads &&
+    #      check_lib pthreads pthread.h pthread_create -pthreads; then
+    #     add_allcflags -pthreads
+    # elif check_lib pthreads pthread.h pthread_join   -ldl -pthread &&
+    #      check_lib pthreads pthread.h pthread_create -ldl -pthread; then
+    #     add_allcflags -ldl -pthread
+    # elif check_lib pthreads pthread.h pthread_join   -lpthreadGC2 &&
+    #      check_lib pthreads pthread.h pthread_create -lpthreadGC2; then
+    #     :
+    # elif check_lib pthreads pthread.h pthread_join   -lpthread &&
+    #      check_lib pthreads pthread.h pthread_create -lpthread; then
+    #     :
+    # elif check_func pthread_join && check_func pthread_create; then
+    #     enable pthreads
+    # fi
+    # check_cc pthreads "pthread.h" "static pthread_mutex_t atomic_lock = PTHREAD_MUTEX_INITIALIZER"
 
-    if enabled pthreads; then
-        check_builtin sem_timedwait semaphore.h "sem_t *s; sem_init(s,0,0); sem_timedwait(s,0); sem_destroy(s)" $pthreads_extralibs
-        check_func pthread_cancel $pthreads_extralibs
-        hdrs=pthread.h
-        if enabled pthread_np_h; then
-            hdrs="$hdrs pthread_np.h"
-        fi
-        check_lib pthread_set_name_np "$hdrs" pthread_set_name_np -lpthread
-        check_lib pthread_setname_np "$hdrs" pthread_setname_np -lpthread
-    fi
+    # if enabled pthreads; then
+    #     check_builtin sem_timedwait semaphore.h "sem_t *s; sem_init(s,0,0); sem_timedwait(s,0); sem_destroy(s)" $pthreads_extralibs
+    #     check_func pthread_cancel $pthreads_extralibs
+    #     hdrs=pthread.h
+    #     if enabled pthread_np_h; then
+    #         hdrs="$hdrs pthread_np.h"
+    #     fi
+    #     check_lib pthread_set_name_np "$hdrs" pthread_set_name_np -lpthread
+    #     check_lib pthread_setname_np "$hdrs" pthread_setname_np -lpthread
+    # fi
 fi
 
-enabled  zlib && { check_pkg_config zlib zlib "zlib.h" zlibVersion ||
-                   check_lib zlib   zlib.h      zlibVersion    -lz; }
+# enabled  zlib && { check_pkg_config zlib zlib "zlib.h" zlibVersion ||
+#                    check_lib zlib   zlib.h      zlibVersion    -lz; }
 enabled bzlib && check_lib bzlib bzlib.h BZ2_bzlibVersion    -lbz2
 enabled  lzma && check_lib lzma   lzma.h lzma_version_number -llzma
 
-enabled zlib && test_exec $zlib_extralibs <<EOF && enable zlib_gzip
-#include <zlib.h>
-int main(void) {
-    if (zlibCompileFlags() & (1 << 17)) return 1;
-    return 0;
-}
-EOF
+enabled zlib && enable zlib_gzip
 
 [ -x "$(command -v gzip)" ] && enable gzip
 
@@ -7485,19 +7480,20 @@ if enabled gcrypt; then
 fi
 
 if enabled sdl2; then
-    SDL2_CONFIG="${cross_prefix}sdl2-config"
-    test_pkg_config sdl2 "sdl2 >= 2.0.1 sdl2 < 3.0.0" SDL_events.h SDL_PollEvent
-    if disabled sdl2 && "${SDL2_CONFIG}" --version > /dev/null 2>&1; then
-        sdl2_cflags=$("${SDL2_CONFIG}" --cflags)
-        sdl2_extralibs=$("${SDL2_CONFIG}" --libs)
-        test_cpp_condition SDL.h "(SDL_MAJOR_VERSION<<16 | SDL_MINOR_VERSION<<8 | SDL_PATCHLEVEL) >= 0x020001" $sdl2_cflags &&
-        test_cpp_condition SDL.h "(SDL_MAJOR_VERSION<<16 | SDL_MINOR_VERSION<<8 | SDL_PATCHLEVEL) < 0x030000" $sdl2_cflags &&
-        check_func_headers SDL_events.h SDL_PollEvent $sdl2_extralibs $sdl2_cflags &&
-            enable sdl2
-    fi
-    if test $target_os = "mingw32"; then
-        sdl2_extralibs=$(filter_out '-mwindows' $sdl2_extralibs)
-    fi
+    enable sdl2
+    # SDL2_CONFIG="${cross_prefix}sdl2-config"
+    # test_pkg_config sdl2 "sdl2 >= 2.0.1 sdl2 < 3.0.0" SDL_events.h SDL_PollEvent
+    # if disabled sdl2 && "${SDL2_CONFIG}" --version > /dev/null 2>&1; then
+    #     sdl2_cflags=$("${SDL2_CONFIG}" --cflags)
+    #     sdl2_extralibs=$("${SDL2_CONFIG}" --libs)
+    #     test_cpp_condition SDL.h "(SDL_MAJOR_VERSION<<16 | SDL_MINOR_VERSION<<8 | SDL_PATCHLEVEL) >= 0x020001" $sdl2_cflags &&
+    #     test_cpp_condition SDL.h "(SDL_MAJOR_VERSION<<16 | SDL_MINOR_VERSION<<8 | SDL_PATCHLEVEL) < 0x030000" $sdl2_cflags &&
+    #     check_func_headers SDL_events.h SDL_PollEvent $sdl2_extralibs $sdl2_cflags &&
+    #         enable sdl2
+    # fi
+    # if test $target_os = "mingw32"; then
+    #     sdl2_extralibs=$(filter_out '-mwindows' $sdl2_extralibs)
+    # fi
 fi
 
 if enabled decklink; then
@@ -8783,3 +8779,26 @@ for lib in $LIBRARY_LIST; do
 done
 
 cp_if_changed $TMPH ffbuild/config.sh
+
+# Generate CMake configuration
+echo "Generating cmake/config.cmake..."
+mkdir -p cmake
+python3 tools/config_mak_to_cmake.py ffbuild/config.mak cmake/config.cmake
+
+# Generate CMake source lists
+echo "Generating CMake source lists..."
+python3 tools/makefile_to_cmake.py libavutil/Makefile LIBAVUTIL ARCH=$arch > libavutil/sources.cmake
+python3 tools/makefile_to_cmake.py libswscale/Makefile LIBSWSCALE ARCH=$arch > libswscale/sources.cmake
+python3 tools/makefile_to_cmake.py libswresample/Makefile LIBSWRESAMPLE ARCH=$arch > libswresample/sources.cmake
+python3 tools/makefile_to_cmake.py libavcodec/Makefile LIBAVCODEC ARCH=$arch > libavcodec/sources.cmake
+python3 tools/makefile_to_cmake.py libavformat/Makefile LIBAVFORMAT ARCH=$arch > libavformat/sources.cmake
+python3 tools/makefile_to_cmake.py libavdevice/Makefile LIBAVDEVICE ARCH=$arch > libavdevice/sources.cmake
+python3 tools/makefile_to_cmake.py libavfilter/Makefile LIBAVFILTER ARCH=$arch > libavfilter/sources.cmake
+python3 tools/makefile_to_cmake.py fftools/Makefile FFTOOLS ARCH=$arch > fftools/sources.cmake
+
+# Append arch-specific sources
+for lib in libavutil libswscale libswresample libavcodec libavformat libavdevice libavfilter; do
+    if [ -f "$lib/$arch/Makefile" ]; then
+        python3 tools/makefile_to_cmake.py "$lib/$arch/Makefile" $(echo $lib | tr '[:lower:]' '[:upper:]') ARCH=$arch >> "$lib/sources.cmake"
+    fi
+done

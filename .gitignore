@@ -50,3 +50,7 @@
 /libavfilter/vulkan/*.c
 /.*/
 !/.forgejo/
+build/
+cmake/config.cmake
+*/sources.cmake
+cmake-build*/
