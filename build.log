@@ -1,0 +1,68 @@
+[  0%] Building C object libavutil/CMakeFiles/avutil.dir/aes.c.o
+[  0%] Building C object libavutil/CMakeFiles/avutil.dir/adler32.c.o
+[  0%] Building C object libavutil/CMakeFiles/avutil.dir/ambient_viewing_environment.c.o
+[  0%] Building C object libavutil/CMakeFiles/avutil.dir/aes_ctr.c.o
+[  0%] Building C object libavutil/CMakeFiles/avutil.dir/audio_fifo.c.o
+[  0%] Building C object libavutil/CMakeFiles/avutil.dir/avstring.c.o
+[  0%] Building C object libavutil/CMakeFiles/avutil.dir/avsscanf.c.o
+[  0%] Building C object libavutil/CMakeFiles/avutil.dir/base64.c.o
+[  0%] Building C object libavutil/CMakeFiles/avutil.dir/blowfish.c.o
+[  0%] Building C object libavutil/CMakeFiles/avutil.dir/bprint.c.o
+[  0%] Building C object libavutil/CMakeFiles/avutil.dir/buffer.c.o
+[  1%] Building C object libavutil/CMakeFiles/avutil.dir/cast5.c.o
+[  1%] Building C object libavutil/CMakeFiles/avutil.dir/camellia.c.o
+[  1%] Building C object libavutil/CMakeFiles/avutil.dir/container_fifo.c.o
+[  1%] Building C object libavutil/CMakeFiles/avutil.dir/channel_layout.c.o
+[  1%] Building C object libavutil/CMakeFiles/avutil.dir/cpu.c.o
+[  1%] Building C object libavutil/CMakeFiles/avutil.dir/crc.c.o
+[  1%] Building C object libavutil/CMakeFiles/avutil.dir/csp.c.o
+[  1%] Building C object libavutil/CMakeFiles/avutil.dir/des.c.o
+[  1%] Building C object libavutil/CMakeFiles/avutil.dir/detection_bbox.c.o
+[  1%] Building C object libavutil/CMakeFiles/avutil.dir/dict.c.o
+[  1%] Building C object libavutil/CMakeFiles/avutil.dir/display.c.o
+[  1%] Building C object libavutil/CMakeFiles/avutil.dir/dovi_meta.c.o
+[  1%] Building C object libavutil/CMakeFiles/avutil.dir/downmix_info.c.o
+[  1%] Building C object libavutil/CMakeFiles/avutil.dir/encryption_info.c.o
+[  1%] Building C object libavutil/CMakeFiles/avutil.dir/error.c.o
+[  1%] Building C object libavutil/CMakeFiles/avutil.dir/eval.c.o
+[  1%] Building C object libavutil/CMakeFiles/avutil.dir/executor.c.o
+[  1%] Building C object libavutil/CMakeFiles/avutil.dir/fifo.c.o
+[  1%] Building C object libavutil/CMakeFiles/avutil.dir/file.c.o
+[  1%] Building C object libavutil/CMakeFiles/avutil.dir/file_open.c.o
+[  1%] Building C object libavutil/CMakeFiles/avutil.dir/float_dsp.c.o
+[  2%] Building C object libavutil/CMakeFiles/avutil.dir/float_scalarproduct.c.o
+[  2%] Building C object libavutil/CMakeFiles/avutil.dir/film_grain_params.c.o
+[  2%] Building C object libavutil/CMakeFiles/avutil.dir/fixed_dsp.c.o
+[  2%] Building C object libavutil/CMakeFiles/avutil.dir/frame.c.o
+[  2%] Building C object libavutil/CMakeFiles/avutil.dir/hash.c.o
+/app/libavutil/frame.c: In function ‘get_video_buffer’:
+/app/libavutil/frame.c:73:16: error: ‘HAVE_SIMD_ALIGN_64’ undeclared (first use in this function)
+   73 | #define ALIGN (HAVE_SIMD_ALIGN_64 ? 64 : 32)
+      |                ^~~~~~~~~~~~~~~~~~
+/app/libavutil/frame.c:90:17: note: in expansion of macro ‘ALIGN’
+   90 |         align = ALIGN;
+      |                 ^~~~~
+/app/libavutil/frame.c:73:16: note: each undeclared identifier is reported only once for each function it appears in
+   73 | #define ALIGN (HAVE_SIMD_ALIGN_64 ? 64 : 32)
+      |                ^~~~~~~~~~~~~~~~~~
+/app/libavutil/frame.c:90:17: note: in expansion of macro ‘ALIGN’
+   90 |         align = ALIGN;
+      |                 ^~~~~
+/app/libavutil/frame.c: In function ‘get_audio_buffer’:
+/app/libavutil/frame.c:73:16: error: ‘HAVE_SIMD_ALIGN_64’ undeclared (first use in this function)
+   73 | #define ALIGN (HAVE_SIMD_ALIGN_64 ? 64 : 32)
+      |                ^~~~~~~~~~~~~~~~~~
+/app/libavutil/frame.c:164:17: note: in expansion of macro ‘ALIGN’
+  164 |         align = ALIGN;
+      |                 ^~~~~
+/app/libavutil/frame.c: In function ‘av_frame_apply_cropping’:
+/app/libavutil/frame.c:798:50: warning: implicit declaration of function ‘ff_ctz’ [-Wimplicit-function-declaration]
+  798 |         int log2_crop_align = frame->crop_left ? ff_ctz(frame->crop_left) : INT_MAX;
+      |                                                  ^~~~~~
+[  2%] Building C object libavutil/CMakeFiles/avutil.dir/hdr_dynamic_metadata.c.o
+[  2%] Building C object libavutil/CMakeFiles/avutil.dir/hdr_dynamic_vivid_metadata.c.o
+[  2%] Building C object libavutil/CMakeFiles/avutil.dir/hmac.c.o
+gmake[2]: *** [libavutil/CMakeFiles/avutil.dir/build.make:566: libavutil/CMakeFiles/avutil.dir/frame.c.o] Error 1
+gmake[2]: *** Waiting for unfinished jobs....
+gmake[1]: *** [CMakeFiles/Makefile2:226: libavutil/CMakeFiles/avutil.dir/all] Error 2
+gmake: *** [Makefile:91: all] Error 2
