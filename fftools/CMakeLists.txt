@@ -52,6 +52,24 @@ set(FFPLAY_SOURCES
     opt_common.c
 )
 
+# Resources
+find_package(Python3 REQUIRED)
+
+function(add_resource output input varname)
+    add_custom_command(
+        OUTPUT ${output}
+        COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tools/file2c.py ${input} ${output} ${varname}
+        DEPENDS ${input} ${CMAKE_SOURCE_DIR}/tools/file2c.py
+    )
+endfunction()
+
+# Graph resources
+add_resource(${CMAKE_CURRENT_BINARY_DIR}/graph_css.c ${CMAKE_CURRENT_SOURCE_DIR}/resources/graph.css graph_css)
+add_resource(${CMAKE_CURRENT_BINARY_DIR}/graph_html.c ${CMAKE_CURRENT_SOURCE_DIR}/resources/graph.html graph_html)
+
+list(APPEND FFMPEG_SOURCES ${CMAKE_CURRENT_BINARY_DIR}/graph_css.c ${CMAKE_CURRENT_BINARY_DIR}/graph_html.c)
+
+
 if(CONFIG_FFMPEG)
     add_executable(ffmpeg ${FFMPEG_SOURCES})
     target_link_libraries(ffmpeg PRIVATE
@@ -76,8 +94,7 @@ endif()
 
 if(CONFIG_FFPLAY)
     if(CONFIG_SDL2)
-        find_package(SDL2 REQUIRED)
-        include_directories(${SDL2_INCLUDE_DIRS})
+        # SDL2 detection is done in root CMakeLists.txt
         add_executable(ffplay ${FFPLAY_SOURCES})
         target_link_libraries(ffplay PRIVATE
             avdevice avfilter avformat avcodec swresample swscale avutil

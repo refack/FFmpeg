@@ -4,5 +4,12 @@
 # Skipping target specific assignment: OBJS-ffprobe +=                        fftools/textformat/avtextformat.o  fftools/textformat/tf_compact.o    fftools/textformat/tf_default.o    fftools/textformat/tf_flat.o       fftools/textformat/tf_ini.o        fftools/textformat/tf_json.o       fftools/textformat/tf_mermaid.o    fftools/textformat/tf_xml.o        fftools/textformat/tw_avio.o       fftools/textformat/tw_buffer.o     fftools/textformat/tw_stdout.o
 # Skipping target specific assignment: OBJS-ffmpeg += $(COMPAT_OBJS:%=compat/%)
 # Skipping target specific assignment: OBJS-ffplay += fftools/ffplay_renderer.o
-# Skipping target specific assignment: OBJS-$(1) += fftools/cmdutils.o fftools/opt_common.o fftools/$(1).o $(OBJS-$(1)-yes)
-# Skipping target specific assignment: OBJS-$(1) += fftools/fftoolsres.o
+# Warning: Unexpanded variable in file list: fftools/$(1).c
+# Warning: Unexpanded variable in file list: $(OBJS-$(1)-yes)
+if(1)
+    list(APPEND FFTOOLS_SOURCES fftools/cmdutils.c)
+    list(APPEND FFTOOLS_SOURCES fftools/opt_common.c)
+endif()
+if(1)
+    list(APPEND FFTOOLS_SOURCES fftools/fftoolsres.c)
+endif()
