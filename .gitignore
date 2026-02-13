@@ -53,6 +53,4 @@
 build/
 cmake/config.cmake
 */sources.cmake
-build/
-build/
-build_cmake/
+cmake-build*/
