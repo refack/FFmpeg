@@ -1,0 +1,11 @@
+static const {{ struct_name }} * const {{ name }}[] = {
+{% for item in items %}
+    &ff_{{ item }},
+{% endfor %}
+{% if name == 'filter_list' %}
+    &ff_asrc_abuffer,
+    &ff_vsrc_buffer,
+    &ff_asink_abuffer,
+    &ff_vsink_buffer,
+{% endif %}
+    NULL };

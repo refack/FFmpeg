@@ -1,0 +1,9 @@
+# Generated from config.mak
+
+{% for key, value in variables.items() %}
+{% if value is boolean %}
+set({{ key }} {{ 'ON' if value else 'OFF' }})
+{% else %}
+set({{ key }} "{{ value|replace('"', '\\"') }}")
+{% endif %}
+{% endfor %}

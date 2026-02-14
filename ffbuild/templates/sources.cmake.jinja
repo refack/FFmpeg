@@ -1,0 +1,23 @@
+{% for block in blocks -%}
+{% if block.condition or block.parent_condition %}
+{%- if block.parent_condition %}
+if({{ 'NOT ' ~ block.parent_condition[1:] if block.parent_condition.startswith('!') else block.parent_condition }})
+{%- endif %}
+{%- if block.condition %}
+    if({{ 'NOT ' ~ block.condition[1:] if block.condition.startswith('!') else block.condition }})
+{%- endif %}
+{%- for file in block.files %}
+        list(APPEND {{ block.var }} {{ file }})
+{%- endfor %}
+{%- if block.condition %}
+    endif()
+{%- endif %}
+{%- if block.parent_condition %}
+endif()
+{%- endif %}
+{% else %}
+{%- for file in block.files %}
+list(APPEND {{ block.var }} {{ file }})
+{%- endfor %}
+{% endif %}
+{% endfor -%}

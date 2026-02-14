@@ -1,0 +1,3 @@
+{% for key, value in config_items.items() %}
+{{ '@c ' if not value else '' }}@set {{ prefix|lower }}{{ key|lower|replace('_', '-') }} {{ 'yes' if value else 'no' }}
+{% endfor %}

@@ -1,0 +1,9 @@
+#include <stdint.h>
+const unsigned int ff_{{ var_name }}_len = {{ data|length }};
+const unsigned char ff_{{ var_name }}_data[] = {
+{% for byte in data %}
+0x{{ '%02x' % byte }}, {% if loop.index % 16 == 0 %}
+{% endif %}
+{% endfor %}
+0
+};

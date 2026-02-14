@@ -14,6 +14,17 @@ path when launching `configure`, e.g. `/ffmpegdir/ffmpeg/configure`.
 
 3. Type `make install` to install all binaries and libraries you built.
 
+Build Prerequisites
+-------------------
+
+The build system requires **Python 3.6+** and the **Jinja2** template engine.
+Install Jinja2 using pip:
+
+    pip3 install jinja2
+
+The configuration process uses `ffbuild/codegen.py` to generate build files
+from templates located in `ffbuild/templates/`.
+
 NOTICE
 ------
 

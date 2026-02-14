@@ -58,8 +58,8 @@ find_package(Python3 REQUIRED)
 function(add_resource output input varname)
     add_custom_command(
         OUTPUT ${output}
-        COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tools/file2c.py ${input} ${output} ${varname}
-        DEPENDS ${input} ${CMAKE_SOURCE_DIR}/tools/file2c.py
+        COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/ffbuild/file2c.py ${input} ${output} ${varname}
+        DEPENDS ${input} ${CMAKE_SOURCE_DIR}/ffbuild/file2c.py
     )
 endfunction()
 
