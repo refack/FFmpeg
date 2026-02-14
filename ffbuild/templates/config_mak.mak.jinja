@@ -1,0 +1,3 @@
+{% for key, value in config_items.items() %}
+{{ '!' if not value else '' }}{{ prefix }}{{ key|upper }}=yes
+{% endfor %}

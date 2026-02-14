@@ -1,0 +1,3 @@
+{% for key, value in config_items.items() %}
+%define {{ prefix }}{{ key|upper }} {{ 1 if value else 0 }}
+{% endfor %}
