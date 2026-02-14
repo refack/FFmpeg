@@ -8263,7 +8263,7 @@ expand_deps(){
         eval deps=\$${1}_deps
         append ${1}_deps $(map 'eval echo \$${v}_deps' $deps)
         unique ${1}_deps
-        eval '[ ${#deps} = ${#'${1}_deps'} ]' && break  # doesn't expand anymore
+        eval '[ ${#deps} = ${#'${1}_deps'} ]' && break  # doesnt expand anymore
     done
 
     eval is_in $1 \$${1}_deps && die "Dependency cycle at ${1}_deps"
