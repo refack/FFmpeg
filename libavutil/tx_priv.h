@@ -206,7 +206,7 @@ typedef struct FFTXCodelet {
                                    * flags that describe its properties. */
 
     int factors[TX_MAX_FACTORS];  /* Length factors. MUST be coprime. */
-#define TX_FACTOR_ANY -1          /* When used alone, signals that the codelet
+#define TX_FACTOR_ANY (-1)        /* When used alone, signals that the codelet
                                    * supports all factors. Otherwise, if other
                                    * factors are present, it signals that whatever
                                    * remains will be supported, as long as the
@@ -217,7 +217,7 @@ typedef struct FFTXCodelet {
 
     int min_len;                  /* Minimum length of transform, must be >= 1 */
     int max_len;                  /* Maximum length of transform */
-#define TX_LEN_UNLIMITED -1       /* Special length value to permit all lengths */
+#define TX_LEN_UNLIMITED (-1)     /* Special length value to permit all lengths */
 
     int (*init)(AVTXContext *s,   /* Optional callback for current context initialization. */
                 const struct FFTXCodelet *cd,

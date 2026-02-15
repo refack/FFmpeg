@@ -198,14 +198,14 @@ static void ansi_fputs(int level, int tint, const char *str, int local_use_color
     } else if (tint && use_color == 256) {
         fprintf(stderr,
                 "\033[48;5;%"PRIu32"m\033[38;5;%dm%s\033[0m",
-                (color[level] >> 16) & 0xff,
+                color[level],
                 tint,
                 str);
     } else if (local_use_color == 256) {
         fprintf(stderr,
                 "\033[48;5;%"PRIu32"m\033[38;5;%"PRIu32"m%s\033[0m",
-                (color[level] >> 16) & 0xff,
-                (color[level] >> 8) & 0xff,
+                color[level],
+                0,
                 str);
     } else
         fputs(str, stderr);

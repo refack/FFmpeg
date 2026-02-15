@@ -25,6 +25,7 @@
  */
 
 #include "mem.h"
+#include "tx.h"
 
 #define TABLE_DEF(name, size) \
     DECLARE_ALIGNED(32, TXSample, TX_TAB(ff_tx_tab_ ##name))[size]
@@ -1737,7 +1738,7 @@ static void TX_NAME(ff_tx_rdft_ ##n)(AVTXContext *s, void *_dst,               \
     TXComplex *data = _dst;                                                    \
     TXSample *out = _dst; /* Half-complex is forward-only */                   \
     TXSample tmp_dc;                                                           \
-    av_unused TXSample tmp_mid;                                                \
+    av_unused TXSample tmp_mid;                                          \
     TXSample tmp[4];                                                           \
     TXComplex sf, sl;                                                          \
                                                                                \

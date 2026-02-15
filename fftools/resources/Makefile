@@ -8,9 +8,8 @@ OBJS-resman +=                     \
     fftools/resources/resman.o     \
 
 
-RESOBJS +=                         \
-    fftools/resources/graph.html.o \
-    fftools/resources/graph.css.o  \
+# Resource object list lives in a separate file for reuse by codegen.
+include $(SRC_PATH)/fftools/resources/resobjs.sourcelist.mak
 
 
 $(RESOBJS): CCDEP       =

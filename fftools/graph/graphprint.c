@@ -36,9 +36,13 @@
 #include "libavutil/pixdesc.h"
 #include "libavutil/dict.h"
 #include "libavutil/common.h"
-#include "libavfilter/avfilter.h"
 #include "libavutil/buffer.h"
 #include "libavutil/hwcontext.h"
+
+#include "libavfilter/avfilter.h"
+
+#include "libavcodec/codec_desc.h"
+
 #include "fftools/textformat/avtextformat.h"
 #include "fftools/textformat/tf_mermaid.h"
 #include "fftools/resources/resman.h"

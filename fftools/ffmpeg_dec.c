@@ -33,6 +33,7 @@
 
 #include "libavcodec/avcodec.h"
 #include "libavcodec/codec.h"
+#include "libavcodec/codec_desc.h"
 
 #include "ffmpeg.h"
 
