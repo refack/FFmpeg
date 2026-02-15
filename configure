@@ -883,7 +883,7 @@ print_config(){
     pfx=$1
     files=$2
     shift 2
-    map 'eval echo "$v \${$v:-no}"' "$@" | python3 ffbuild/codegen.py print_config --prefix "$pfx" --files "$files"
+    map 'eval echo "$v \${$v:-no}"' "$@" | python ffbuild/codegen.py print_config --prefix "$pfx" --files "$files"
 }
 
 print_enabled(){
@@ -8454,7 +8454,7 @@ map 'eval echo "${v}_FFLIBS=\$${v}_deps"' $LIBRARY_LIST
 for entry in $LIBRARY_LIST $PROGRAM_LIST $EXTRALIBS_LIST; do
     eval echo "EXTRALIBS-${entry}=\$${entry}_extralibs"
 done
-) | python3 ffbuild/codegen.py generate_config --template ffbuild_config.mak.jinja --output ffbuild/config.mak --vars-stdin --env-vars $VAR_LIST
+) | python ffbuild/codegen.py generate_config --template ffbuild_config.mak.jinja --output ffbuild/config.mak --vars-stdin --env-vars $VAR_LIST
 
 VAR_LIST="target_os extern_prefix build_suffix SLIBSUF sws_max_filter_size assert_level malloc_prefix as_arch_level"
 export_vars $VAR_LIST
@@ -8464,11 +8464,11 @@ echo "license=$(c_escape $license)"
 echo "datadir=$(eval c_escape $datadir)"
 echo "cc_ident=$(c_escape ${cc_ident:-Unknown compiler})"
 enabled getenv && echo "getenv=yes"
-) | python3 ffbuild/codegen.py generate_config --template config_h.jinja --output $TMPH --vars-stdin --env-vars $VAR_LIST
+) | python ffbuild/codegen.py generate_config --template config_h.jinja --output $TMPH --vars-stdin --env-vars $VAR_LIST
 
 if enabled x86asm; then
     append config_files $TMPASM
-    python3 ffbuild/codegen.py generate_config --template config_asm_header.asm.jinja --output $TMPASM
+    python ffbuild/codegen.py generate_config --template config_asm_header.asm.jinja --output $TMPASM
 fi
 
 
@@ -8494,7 +8494,7 @@ enabled x86asm && cp_if_changed $TMPASM config.asm && cat > $TMPASM <<EOF
 EOF
 
 # Reopen a new TMPH for config_components.h.
-python3 ffbuild/codegen.py generate_config --template config_components_header.h.jinja --output $TMPH
+python ffbuild/codegen.py generate_config --template config_components_header.h.jinja --output $TMPH
 
 print_config CONFIG_ "$config_files" $ALL_COMPONENTS
 
@@ -8504,7 +8504,7 @@ echo "endif # FFMPEG_CONFIG_MAK" >> ffbuild/config.mak
 cp_if_changed $TMPH config_components.h
 enabled x86asm && cp_if_changed $TMPASM config_components.asm
 
-python3 ffbuild/codegen.py generate_config --template avconfig_header.h.jinja --output $TMPH
+python ffbuild/codegen.py generate_config --template avconfig_header.h.jinja --output $TMPH
 
 print_config AV_HAVE_ $TMPH $HAVE_LIST_PUB
 
@@ -8540,7 +8540,7 @@ print_enabled_components(){
             enabled_items="$enabled_items $c"
         fi
     done
-    python3 ffbuild/codegen.py print_enabled_components --file "$TMPH" --struct-name "$struct_name" --name "$name" --items "$enabled_items"
+    python ffbuild/codegen.py print_enabled_components --file "$TMPH" --struct-name "$struct_name" --name "$name" --items "$enabled_items"
     cp_if_changed $TMPH $file
 }
 
@@ -8564,29 +8564,8 @@ enabled rpath && echo "rpath=-Wl,-rpath,\${libdir}"
 for lib in $LIBRARY_LIST; do
     eval echo "${lib}_deps=\$${lib}_deps"
 done
-) | python3 ffbuild/codegen.py generate_config --template config.sh.jinja --output $TMPH --vars-stdin --env-vars $VAR_LIST
+) | python ffbuild/codegen.py generate_config --template config.sh.jinja --output $TMPH --vars-stdin --env-vars $VAR_LIST
 
 cp_if_changed $TMPH ffbuild/config.sh
 
-# Generate CMake configuration
-echo "Generating cmake/config.cmake..."
-mkdir -p cmake
-python3 ffbuild/config_mak_to_cmake.py ffbuild/config.mak cmake/config.cmake
-
-# Generate CMake source lists
-echo "Generating CMake source lists..."
-python3 ffbuild/makefile_to_cmake.py libavutil/Makefile LIBAVUTIL ARCH=$arch > libavutil/sources.cmake
-python3 ffbuild/makefile_to_cmake.py libswscale/Makefile LIBSWSCALE ARCH=$arch > libswscale/sources.cmake
-python3 ffbuild/makefile_to_cmake.py libswresample/Makefile LIBSWRESAMPLE ARCH=$arch > libswresample/sources.cmake
-python3 ffbuild/makefile_to_cmake.py libavcodec/Makefile LIBAVCODEC ARCH=$arch > libavcodec/sources.cmake
-python3 ffbuild/makefile_to_cmake.py libavformat/Makefile LIBAVFORMAT ARCH=$arch > libavformat/sources.cmake
-python3 ffbuild/makefile_to_cmake.py libavdevice/Makefile LIBAVDEVICE ARCH=$arch > libavdevice/sources.cmake
-python3 ffbuild/makefile_to_cmake.py libavfilter/Makefile LIBAVFILTER ARCH=$arch > libavfilter/sources.cmake
-python3 ffbuild/makefile_to_cmake.py fftools/Makefile FFTOOLS ARCH=$arch > fftools/sources.cmake
-
-# Append arch-specific sources
-for lib in libavutil libswscale libswresample libavcodec libavformat libavdevice libavfilter; do
-    if [ -f "$lib/$arch/Makefile" ]; then
-        python3 ffbuild/makefile_to_cmake.py "$lib/$arch/Makefile" $(echo $lib | tr '[:lower:]' '[:upper:]') ARCH=$arch >> "$lib/sources.cmake"
-    fi
-done
+. ffbuild/generate_cmakes.sh

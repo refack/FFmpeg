@@ -1,105 +1,52 @@
-set(FFMPEG_SOURCES
-    ffmpeg.c
-    ffmpeg_dec.c
-    ffmpeg_demux.c
-    ffmpeg_enc.c
-    ffmpeg_filter.c
-    ffmpeg_hw.c
-    ffmpeg_mux.c
-    ffmpeg_mux_init.c
-    ffmpeg_opt.c
-    ffmpeg_sched.c
-    graph/graphprint.c
-    sync_queue.c
-    thread_queue.c
-    textformat/avtextformat.c
-    textformat/tf_compact.c
-    textformat/tf_default.c
-    textformat/tf_flat.c
-    textformat/tf_ini.c
-    textformat/tf_json.c
-    textformat/tf_mermaid.c
-    textformat/tf_xml.c
-    textformat/tw_avio.c
-    textformat/tw_buffer.c
-    textformat/tw_stdout.c
-    cmdutils.c
-    opt_common.c
-    resources/resman.c
-)
+include(sources.cmake)
 
-set(FFPROBE_SOURCES
-    ffprobe.c
-    textformat/avtextformat.c
-    textformat/tf_compact.c
-    textformat/tf_default.c
-    textformat/tf_flat.c
-    textformat/tf_ini.c
-    textformat/tf_json.c
-    textformat/tf_mermaid.c
-    textformat/tf_xml.c
-    textformat/tw_avio.c
-    textformat/tw_buffer.c
-    textformat/tw_stdout.c
-    cmdutils.c
-    opt_common.c
-)
-
-set(FFPLAY_SOURCES
-    ffplay.c
-    ffplay_renderer.c
-    cmdutils.c
-    opt_common.c
-)
-
-# Resources
+# Find Python3 for resource generation
 find_package(Python3 REQUIRED)
 
 function(add_resource output input varname)
     add_custom_command(
         OUTPUT ${output}
-        COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/ffbuild/file2c.py ${input} ${output} ${varname}
-        DEPENDS ${input} ${CMAKE_SOURCE_DIR}/ffbuild/file2c.py
+        COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/ffbuild/codegen.py file2c ${input} ${output} ${varname}
+        DEPENDS ${input} ${CMAKE_SOURCE_DIR}/ffbuild/codegen.py
     )
 endfunction()
 
-# Graph resources
-add_resource(${CMAKE_CURRENT_BINARY_DIR}/graph_css.c ${CMAKE_CURRENT_SOURCE_DIR}/resources/graph.css graph_css)
-add_resource(${CMAKE_CURRENT_BINARY_DIR}/graph_html.c ${CMAKE_CURRENT_SOURCE_DIR}/resources/graph.html graph_html)
+# Automatically handle resources identified in sources.cmake
+set(ALL_TOOL_SOURCES ${FFMPEG_SOURCES} ${FFPROBE_SOURCES} ${FFPLAY_SOURCES})
+foreach(src ${ALL_TOOL_SOURCES})
+    if(src MATCHES "${CMAKE_CURRENT_BINARY_DIR}/(.*)_(html|css)\\.c$")
+        set(base_name ${CMAKE_MATCH_1})
+        set(ext ${CMAKE_MATCH_2})
+        add_resource(${src} ${CMAKE_CURRENT_SOURCE_DIR}/resources/${base_name}.${ext} ${base_name}_${ext})
+    endif()
+endforeach()
 
-list(APPEND FFMPEG_SOURCES ${CMAKE_CURRENT_BINARY_DIR}/graph_css.c ${CMAKE_CURRENT_BINARY_DIR}/graph_html.c)
+# Define common libraries for all tools
+set(FFMPEG_COMMON_LIBS
+    avdevice avfilter avformat avcodec swresample swscale avutil
+    ${LIBM} ${CMAKE_THREAD_LIBS_INIT}
+)
 
+if(CONFIG_ZLIB)
+    list(APPEND FFMPEG_COMMON_LIBS ${ZLIB_LIBRARIES})
+endif()
 
+# FFMPEG tool
 if(CONFIG_FFMPEG)
     add_executable(ffmpeg ${FFMPEG_SOURCES})
-    target_link_libraries(ffmpeg PRIVATE
-        avdevice avfilter avformat avcodec swresample swscale avutil
-        ${LIBM} ${CMAKE_THREAD_LIBS_INIT}
-    )
-    if(CONFIG_ZLIB)
-        target_link_libraries(ffmpeg PRIVATE ${ZLIB_LIBRARIES})
-    endif()
+    target_link_libraries(ffmpeg PRIVATE ${FFMPEG_COMMON_LIBS})
 endif()
 
+# FFPROBE tool
 if(CONFIG_FFPROBE)
     add_executable(ffprobe ${FFPROBE_SOURCES})
-    target_link_libraries(ffprobe PRIVATE
-        avdevice avfilter avformat avcodec swresample swscale avutil
-        ${LIBM} ${CMAKE_THREAD_LIBS_INIT}
-    )
-    if(CONFIG_ZLIB)
-        target_link_libraries(ffprobe PRIVATE ${ZLIB_LIBRARIES})
-    endif()
+    target_link_libraries(ffprobe PRIVATE ${FFMPEG_COMMON_LIBS})
 endif()
 
+# FFPLAY tool
 if(CONFIG_FFPLAY)
     if(CONFIG_SDL2)
-        # SDL2 detection is done in root CMakeLists.txt
         add_executable(ffplay ${FFPLAY_SOURCES})
-        target_link_libraries(ffplay PRIVATE
-            avdevice avfilter avformat avcodec swresample swscale avutil
-            ${SDL2_LIBRARIES}
-            ${LIBM} ${CMAKE_THREAD_LIBS_INIT}
-        )
+        target_link_libraries(ffplay PRIVATE ${FFMPEG_COMMON_LIBS} ${SDL2_LIBRARIES})
     endif()
 endif()

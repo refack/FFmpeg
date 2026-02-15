@@ -1,11 +1,18 @@
-cmake_minimum_required(VERSION 3.16)
+SET(VERBOSE, ON)
+cmake_minimum_required(VERSION 4.1)
+
 project(FFmpeg C CXX ASM)
 
 # Enable Position Independent Code (PIC)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
+SET(CMAKE_CXX_STANDARD 23)
+SET(CMAKE_CXX_STANDARD_REQUIRED ON)
+SET(CMAKE_C_STANDARD 17)
+SET(CMAKE_C_STANDARD_REQUIRED ON)
+
 # Include configuration generated from config.mak
-include(cmake/config.cmake)
+include(ffbuild/config.cmake)
 
 include(CheckSymbolExists)
 include(CheckIncludeFile)
@@ -15,6 +22,28 @@ include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_BINARY_DIR}
 )
+
+# Add MSVC-specific compat include paths
+if(MSVC)
+    include_directories(
+        ${CMAKE_CURRENT_SOURCE_DIR}/compat/atomics/win32
+        ${CMAKE_CURRENT_SOURCE_DIR}/compat/stdbit
+    )
+endif()
+
+# Essential defines for all platforms
+add_compile_definitions(HAVE_AV_CONFIG_H)
+
+# Windows-specific defines
+if(WIN32)
+    add_compile_definitions(
+        WIN32_LEAN_AND_MEAN
+        _USE_MATH_DEFINES
+        _CRT_SECURE_NO_WARNINGS
+        _CRT_NONSTDC_NO_WARNINGS
+        _WIN32_WINNT=0x0600
+    )
+endif()
 
 # Apply flags from configure
 # config.mak separates CPPFLAGS (defines, includes) and CFLAGS (compiler options)
@@ -90,6 +119,12 @@ if(CONFIG_SDL2)
     else()
         message(FATAL_ERROR "SDL2 enabled but not found")
     endif()
+endif()
+
+if(CMAKE_C_COMPILER_ID STREQUAL "MSVC")
+    add_compile_options($<$<COMPILE_LANGUAGE:C>:/std:clatest>)
+    add_compile_options($<$<COMPILE_LANGUAGE:C>:/experimental:c11atomics>)
+    add_compile_options(-openmp:experimental)
 endif()
 
 # Add subdirectories

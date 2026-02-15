@@ -73,6 +73,8 @@
 #include "libavutil/mem.h"
 #include "libavutil/time.h"
 
+#include "libavcodec/codec_desc.h"
+
 #include "libavformat/avformat.h"
 
 #include "libavdevice/avdevice.h"

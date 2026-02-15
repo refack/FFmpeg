@@ -37,6 +37,7 @@
 
 #include "libavcodec/bsf.h"
 #include "libavcodec/packet.h"
+#include "libavcodec/codec_desc.h"
 
 #include "libavformat/avformat.h"
 

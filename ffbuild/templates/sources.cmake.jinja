@@ -1,23 +1,31 @@
-{% for block in blocks -%}
-{% if block.condition or block.parent_condition %}
+# Sources for {{ blocks[0].var }}
+
+{%- for block in blocks %}
+{%- if block.condition or block.parent_condition %}
 {%- if block.parent_condition %}
 if({{ 'NOT ' ~ block.parent_condition[1:] if block.parent_condition.startswith('!') else block.parent_condition }})
+{%- set outer_indent = "    " %}
+{%- else %}
+{%- set outer_indent = "" %}
 {%- endif %}
 {%- if block.condition %}
-    if({{ 'NOT ' ~ block.condition[1:] if block.condition.startswith('!') else block.condition }})
+{{ outer_indent }}if({{ 'NOT ' ~ block.condition[1:] if block.condition.startswith('!') else block.condition }})
+{%- set inner_indent = outer_indent ~ "    " %}
+{%- else %}
+{%- set inner_indent = outer_indent %}
 {%- endif %}
 {%- for file in block.files %}
-        list(APPEND {{ block.var }} {{ file }})
+{{ inner_indent }}list(APPEND {{ block.var }} {{ file }})
 {%- endfor %}
 {%- if block.condition %}
-    endif()
+{{ outer_indent }}endif()
 {%- endif %}
 {%- if block.parent_condition %}
 endif()
 {%- endif %}
-{% else %}
+{%- else %}
 {%- for file in block.files %}
 list(APPEND {{ block.var }} {{ file }})
 {%- endfor %}
-{% endif %}
-{% endfor -%}
+{%- endif %}
+{%- endfor %}
