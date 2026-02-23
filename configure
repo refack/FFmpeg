@@ -8,9 +8,10 @@
 #
 
 # Prevent locale nonsense from breaking basic text processing.
-set -e +x
+set -e
 . ffbuild/configure_functions.sh
-set +e -x
+. ffbuild/configure_platform.sh
+set +e
 
 LC_ALL=C
 export LC_ALL
@@ -591,17 +592,15 @@ EXESUF=$(exesuf $target_os)
 HOSTEXESUF=$(exesuf $host_os)
 
 # set temporary file name
+if test -n "$tempprefix"; then
+    mkdir -p "$tempprefix" 2> /dev/null || die "Unable to create temporary directory $tempprefix."
+fi
+: ${TMPDIR:=$tempprefix}
 : ${TMPDIR:=$TEMPDIR}
 : ${TMPDIR:=$TMP}
 : ${TMPDIR:=/tmp}
 
-if [ -n "$tempprefix" ] ; then
-    mktemp(){
-        tmpname="$tempprefix.${HOSTNAME}.${UID}"
-        echo "$tmpname"
-        mkdir "$tmpname"
-    }
-elif ! test_cmd mktemp -u XXXXXX; then
+if ! platform_test_cmd mktemp -u XXXXXX; then
     # simple replacement for missing mktemp
     # NOT SAFE FOR GENERAL USE
     mktemp(){
@@ -648,7 +647,7 @@ EOF
 fi
 
 phase 'Checking toolchain'
-probe_cc cc "$cc" "true"
+platform_probe_cc cc "$cc" "true"
 cflags_filter=$_flags_filter
 cflags_speed=$_cflags_speed
 cflags_size=$_cflags_size
@@ -659,7 +658,7 @@ cc_ldflags=$_ldflags
 set_ccvars CC
 set_ccvars CXX
 
-probe_cc hostcc "$host_cc"
+platform_probe_cc hostcc "$host_cc"
 host_cflags_filter=$_flags_filter
 host_cflags_speed=$_cflags_speed
 add_host_cflags  $_flags $_cflags
@@ -675,17 +674,17 @@ test -n "$cc_type" && enable $cc_type ||
 : ${host_ld_default:=$host_cc}
 set_default ar as objcc dep_cc ld ln_s host_ld windres response_files
 
-probe_cc as "$as"
+platform_probe_cc as "$as"
 asflags_filter=$_flags_filter
 add_asflags $_flags $_cflags
 set_ccvars AS
 
-probe_cc objcc "$objcc"
+platform_probe_cc objcc "$objcc"
 objcflags_filter=$_flags_filter
 add_objcflags $_flags $_cflags
 set_ccvars OBJC
 
-probe_cc ld "$ld"
+platform_probe_cc ld "$ld"
 ldflags_filter=$_flags_filter
 add_ldflags $_flags $_ldflags
 test "$cc_type" != "$ld_type" && add_ldflags $cc_ldflags
@@ -693,13 +692,13 @@ LD_O=${_ld_o-$LD_O}
 LD_LIB=${_ld_lib-$LD_LIB}
 LD_PATH=${_ld_path-$LD_PATH}
 
-probe_cc hostld "$host_ld"
+platform_probe_cc hostld "$host_ld"
 host_ldflags_filter=$_flags_filter
 add_host_ldflags $_flags $_ldflags
 HOSTLD_O=${_ld_o-$HOSTLD_O}
 
 if [ -z "$CC_DEPFLAGS" ] && [ "$dep_cc" != "$cc" ]; then
-    probe_cc depcc "$dep_cc"
+    platform_probe_cc depcc "$dep_cc"
     CCDEP=${_DEPCMD:-$DEPCMD}
     CXXDEP=${CCDEP}
     CCDEP_FLAGS=${_DEPFLAGS:=$DEPFLAGS}
@@ -720,10 +719,10 @@ else
 fi
 
 # Treat unrecognized flags as errors on MSVC
-test_cpp_condition windows.h "_MSC_FULL_VER >= 193030705" &&
-    check_cflags -options:strict
-test_host_cpp_condition windows.h "_MSC_FULL_VER >= 193030705" &&
-    check_host_cflags -options:strict
+platform_test_cpp_condition windows.h "_MSC_FULL_VER >= 193030705" &&
+    platform_check_cflags -options:strict
+platform_test_host_cpp_condition windows.h "_MSC_FULL_VER >= 193030705" &&
+    platform_check_host_cflags -options:strict
 
 add_cflags $extra_cflags
 add_cxxflags $extra_cxxflags
@@ -842,7 +841,7 @@ if enabled aarch64; then
 elif enabled arm; then
 
     check_arm_arch() {
-        test_cpp_condition stddef.h \
+        platform_test_cpp_condition stddef.h \
             "defined __ARM_ARCH_${1}__ || defined __TARGET_ARCH_${2:-$1}" \
             $cpuflags
     }
@@ -902,7 +901,7 @@ elif enabled arm; then
             ;;
     esac
 
-    check_allcflags -mfp16-format=ieee
+    platform_check_allcflags -mfp16-format=ieee
 
 elif enabled loongarch; then
 
@@ -960,15 +959,15 @@ elif enabled mips; then
             p5600)
                 enable mips32r2
                 enable mips32r5
-                check_cflags "-mtune=p5600" && check_cflags "-msched-weight -mload-store-pairs -funroll-loops"
+                platform_check_cflags "-mtune=p5600" && platform_check_cflags "-msched-weight -mload-store-pairs -funroll-loops"
             ;;
             i6400)
                 enable mips64r6
-                check_cflags "-mtune=i6400 -mabi=64" && check_cflags "-msched-weight -mload-store-pairs -funroll-loops" && check_ldflags "-mabi=64"
+                platform_check_cflags "-mtune=i6400 -mabi=64" && platform_check_cflags "-msched-weight -mload-store-pairs -funroll-loops" && platform_check_ldflags "-mabi=64"
             ;;
             p6600)
                 enable mips64r6
-                check_cflags "-mtune=p6600 -mabi=64" && check_cflags "-msched-weight -mload-store-pairs -funroll-loops" && check_ldflags "-mabi=64"
+                platform_check_cflags "-mtune=p6600 -mabi=64" && platform_check_cflags "-msched-weight -mload-store-pairs -funroll-loops" && platform_check_ldflags "-mabi=64"
             ;;
             # Cores from Loongson
             loongson2e|loongson2f|loongson3*)
@@ -1080,13 +1079,13 @@ elif enabled ppc; then
 
 elif enabled riscv; then
 
-    check_headers asm/hwprobe.h
-    check_headers sys/hwprobe.h
+    platform_check_headers asm/hwprobe.h
+    platform_check_headers sys/hwprobe.h
 
-    if test_cpp_condition stddef.h "__riscv_zbb"; then
+    if platform_test_cpp_condition stddef.h "__riscv_zbb"; then
         enable fast_clz
     fi
-    if test_cpp_condition stddef.h "__riscv_zfhmin"; then
+    if platform_test_cpp_condition stddef.h "__riscv_zfhmin"; then
         enable fast_float16
     fi
 
@@ -1130,7 +1129,7 @@ elif enabled x86; then
 
 else
 
-    if test_cpp_condition inttypes.h "UINTPTR_MAX >= UINT64_MAX"; then
+    if platform_test_cpp_condition inttypes.h "UINTPTR_MAX >= UINT64_MAX"; then
         enable fast_64bit
     fi
 
@@ -1143,7 +1142,7 @@ if [ "$cpu" != generic ]; then
 fi
 
 # compiler sanity check
-test_exec <<EOF
+platform_test_exec <<EOF
 int main(void){ return 0; }
 EOF
 if test "$?" != 0; then
@@ -1157,17 +1156,17 @@ fi
 
 add_cppflags -D_ISOC11_SOURCE
 add_cxxflags -D__STDC_CONSTANT_MACROS
-check_cxxflags_cc -std=$stdcxx ctype.h "__cplusplus >= 201103L" ||
-    { check_cxxflags -std=c++11 && stdcxx="c++11" || { check_cxxflags -std=c++0x && stdcxx="c++0x"; }; }
+platform_check_cxxflags_cc -std=$stdcxx ctype.h "__cplusplus >= 201103L" ||
+    { platform_check_cxxflags -std=c++11 && stdcxx="c++11" || { platform_check_cxxflags -std=c++0x && stdcxx="c++0x"; }; }
 
-test_cxxflags_cc -std=$stdcxx ctype.h "__cplusplus >= 201703L" && enable cxx17
+platform_test_cxxflags_cc -std=$stdcxx ctype.h "__cplusplus >= 201703L" && enable cxx17
 
 # some compilers silently accept -std=c11, so we also need to check that the
 # version macro is defined properly
-check_cflags_cc -std=$stdc ctype.h "__STDC_VERSION__ >= 201112L" ||
-    { check_cflags_cc -std=c11 ctype.h "__STDC_VERSION__ >= 201112L" && stdc="c11" || die "Compiler lacks C11 support"; }
+platform_check_cflags_cc -std=$stdc ctype.h "__STDC_VERSION__ >= 201112L" ||
+    { platform_check_cflags_cc -std=c11 ctype.h "__STDC_VERSION__ >= 201112L" && stdc="c11" || die "Compiler lacks C11 support"; }
 
-test_cc <<EOF || die "Compiler lacks support for C11 static assertions"
+platform_test_cc <<EOF || die "Compiler lacks support for C11 static assertions"
 #include <assert.h>
 #include <stddef.h>
 struct Foo {
@@ -1180,53 +1179,53 @@ _Static_assert(offsetof(struct Foo, ptr) >= offsetof(struct Foo, a) + sizeof(obj
                "elements not properly ordered in struct");
 EOF
 
-check_cppflags -D_FILE_OFFSET_BITS=64
-check_cppflags -D_LARGEFILE_SOURCE
+platform_check_cppflags -D_FILE_OFFSET_BITS=64
+platform_check_cppflags -D_LARGEFILE_SOURCE
 
 add_host_cppflags -D_ISOC11_SOURCE
-check_host_cflags_cc -std=$stdc ctype.h "__STDC_VERSION__ >= 201112L" ||
-    check_host_cflags_cc -std=c11 ctype.h "__STDC_VERSION__ >= 201112L" || die "Host compiler lacks C11 support"
+platform_check_host_cflags_cc -std=$stdc ctype.h "__STDC_VERSION__ >= 201112L" ||
+    platform_check_host_cflags_cc -std=c11 ctype.h "__STDC_VERSION__ >= 201112L" || die "Host compiler lacks C11 support"
 
-check_host_cflags -Wall
-check_host_cflags $host_cflags_speed
+platform_check_host_cflags -Wall
+platform_check_host_cflags $host_cflags_speed
 
 case "$arch" in
     aarch64|ia64)
         enabled shared && enable_weak pic
     ;;
     loongarch)
-        check_64bit loongarch32 loongarch64
+        platform_check_64bit loongarch32 loongarch64
         enabled loongarch64 && disable loongarch32
         enabled shared && enable_weak pic
     ;;
     mips)
-        check_64bit mips mips64 '_MIPS_SIM > 1'
+        platform_check_64bit mips mips64 '_MIPS_SIM > 1'
         enabled shared && enable_weak pic
     ;;
     parisc)
-        check_64bit parisc parisc64
+        platform_check_64bit parisc parisc64
         enabled shared && enable_weak pic
     ;;
     ppc)
-        check_64bit ppc ppc64
+        platform_check_64bit ppc ppc64
         enabled shared && enable_weak pic
     ;;
     riscv)
-        check_64bit riscv32 riscv64
+        platform_check_64bit riscv32 riscv64
         enabled shared && enable_weak pic
     ;;
     s390)
-        check_64bit s390 s390x
+        platform_check_64bit s390 s390x
         enabled shared && enable_weak pic
     ;;
     sparc)
-        check_64bit sparc sparc64
+        platform_check_64bit sparc sparc64
         enabled shared && enable_weak pic
     ;;
     x86)
-        check_64bit x86_32 x86_64
+        platform_check_64bit x86_32 x86_64
         # Treat x32 as x64 for now. Note it also needs pic if shared
-        test "$subarch" = "x86_32" && test_cpp_condition stddef.h 'defined(__x86_64__)' &&
+        test "$subarch" = "x86_32" && platform_test_cpp_condition stddef.h 'defined(__x86_64__)' &&
             subarch=x86_64 && enable x86_64 && disable x86_32
         if enabled x86_64; then
             enabled shared && enable_weak pic
@@ -1281,7 +1280,7 @@ case $target_os in
         enable section_data_rel_ro
         oss_indev_extralibs="-lossaudio"
         oss_outdev_extralibs="-lossaudio"
-        enabled gcc || check_ldflags -Wl,-zmuldefs
+        enabled gcc || platform_check_ldflags -Wl,-zmuldefs
         ;;
     openbsd)
         disable symver
@@ -1310,18 +1309,18 @@ case $target_os in
         enabled x86_32 && append SHFLAGS -Wl,-read_only_relocs,suppress
         strip="${strip} -x"
         add_ldflags -Wl,-dynamic,-search_paths_first
-        check_allcflags -Werror=partial-availability
+        platform_check_allcflags -Werror=partial-availability
         SLIBSUF=".dylib"
         SLIBNAME_WITH_VERSION='$(SLIBPREF)$(FULLNAME).$(LIBVERSION)$(SLIBSUF)'
         SLIBNAME_WITH_MAJOR='$(SLIBPREF)$(FULLNAME).$(LIBMAJOR)$(SLIBSUF)'
         enabled x86_64 && objformat="macho64" || objformat="macho32"
         enabled_any pic shared x86_64 ||
-            { check_cflags -mdynamic-no-pic && add_asflags -mdynamic-no-pic; }
-        check_headers dispatch/dispatch.h &&
+            { platform_check_cflags -mdynamic-no-pic && add_asflags -mdynamic-no-pic; }
+        platform_check_headers dispatch/dispatch.h &&
             add_cppflags '-I\$(SRC_PATH)/compat/dispatch_semaphore'
         if test -n "$sysroot"; then
-            is_in -isysroot $cc $CPPFLAGS $CFLAGS || check_cppflags -isysroot $sysroot
-            is_in -isysroot $ld $LDFLAGS          || check_ldflags  -isysroot $sysroot
+            is_in -isysroot $cc $CPPFLAGS $CFLAGS || platform_check_cppflags -isysroot $sysroot
+            is_in -isysroot $ld $LDFLAGS          || platform_check_ldflags  -isysroot $sysroot
         fi
         version_script='-exported_symbols_list'
         VERSION_SCRIPT_POSTPROCESS_CMD='tr " " "\n" | sed -n /global:/,/local:/p | grep ";" | tr ";" "\n" | sed -E "s/(.+)/_\1/g" | sed -E "s/(.+[^*])$$$$/\1*/"'
@@ -1335,7 +1334,7 @@ case $target_os in
         # Clang (and GCC) do. This avoids linker warnings on Xcode 16.3 about
         # "reducing alignment of section __DATA,__common from 0x8000 to 0x4000
         # because it exceeds segment maximum alignment".
-        check_cflags -fno-common
+        platform_check_cflags -fno-common
 
         ;;
     msys*)
@@ -1355,15 +1354,15 @@ case $target_os in
             # Cannot build both shared and static libs when using dllimport.
             disable static
         fi
-        ! enabled small && test_cmd $windres --version && enable gnu_windres
-        enabled x86_32 && check_ldflags -Wl,--large-address-aware
+        ! enabled small && platform_test_cmd $windres --version && enable gnu_windres
+        enabled x86_32 && platform_check_ldflags -Wl,--large-address-aware
         add_cppflags -DWIN32_LEAN_AND_MEAN
         shlibdir_default="$bindir_default"
         SLIBPREF=""
         SLIBSUF=".dll"
         SLIBNAME_WITH_VERSION='$(SLIBPREF)$(FULLNAME)-$(LIBVERSION)$(SLIBSUF)'
         SLIBNAME_WITH_MAJOR='$(SLIBPREF)$(FULLNAME)-$(LIBMAJOR)$(SLIBSUF)'
-        if test_cmd lib.exe -list; then
+        if platform_test_cmd lib.exe -list; then
             SLIB_EXTRA_CMD=-'lib.exe -nologo -machine:$(LIBTARGET) -def:$$(@:$(SLIBSUF)=.def) -out:$(SUBDIR)$(SLIBNAME:$(SLIBSUF)=.lib)'
             if enabled x86_64; then
                 LIBTARGET=x64
@@ -1381,7 +1380,7 @@ case $target_os in
         dlltool="${cross_prefix}dlltool"
         ranlib=:
         enable dos_paths
-        check_ldflags -Wl,--nxcompat,--dynamicbase
+        platform_check_ldflags -Wl,--nxcompat,--dynamicbase
         # Lets work around some stupidity in binutils.
         # ld will strip relocations from executables even though we need them
         # for dynamicbase (ASLR).  Using -pie does retain the reloc section
@@ -1391,7 +1390,7 @@ case $target_os in
             disabled debug && add_ldexeflags -Wl,--pic-executable,-e,_mainCRTStartup
         elif enabled x86_64; then
             disabled debug && add_ldexeflags -Wl,--pic-executable,-e,mainCRTStartup
-            check_ldflags -Wl,--high-entropy-va # binutils 2.25
+            platform_check_ldflags -Wl,--high-entropy-va # binutils 2.25
             # Set image base >4GB for extra entropy with HEASLR
             add_ldexeflags -Wl,--image-base,0x140000000
             append SHFLAGS -Wl,--image-base,0x180000000
@@ -1405,8 +1404,8 @@ case $target_os in
             disable static
             LIBSUF="-static.lib"
         fi
-        ! enabled small && test_cmd $windres --version && enable gnu_windres
-        enabled x86_32 && check_ldflags -LARGEADDRESSAWARE
+        ! enabled small && platform_test_cmd $windres --version && enable gnu_windres
+        enabled x86_32 && platform_check_ldflags -LARGEADDRESSAWARE
         add_cppflags -DWIN32_LEAN_AND_MEAN
         shlibdir_default="$bindir_default"
         LIBPREF=""
@@ -1441,7 +1440,7 @@ case $target_os in
         SHFLAGS='-shared -Wl,--out-implib,$(SUBDIR)lib$(FULLNAME).dll.a'
         enabled x86_64 && objformat="win64" || objformat="win32"
         enable dos_paths
-        ! enabled small && test_cmd $windres --version && enable gnu_windres
+        ! enabled small && platform_test_cmd $windres --version && enable gnu_windres
         add_cppflags -DWIN32_LEAN_AND_MEAN
         add_cppflags -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600
         ;;
@@ -1535,7 +1534,7 @@ rm -r "$link_name"
 
 # determine libc flavour
 
-probe_libc
+platform_probe_libc
 probe_libc host_
 
 # hacks for compiler/libc/os combinations
@@ -1546,10 +1545,10 @@ case $libc_type in
         ;;
 esac
 
-check_compile_assert flt_lim "float.h limits.h" "DBL_MAX == (double)DBL_MAX" ||
+platform_check_compile_assert flt_lim "float.h limits.h" "DBL_MAX == (double)DBL_MAX" ||
     add_cppflags '-I\$(SRC_PATH)/compat/float'
 
-test_cpp_condition stdlib.h "defined(__PIC__) || defined(__pic__) || defined(PIC)" && enable_weak pic
+platform_test_cpp_condition stdlib.h "defined(__PIC__) || defined(__pic__) || defined(PIC)" && enable_weak pic
 
 set_default libdir
 : ${shlibdir_default:="$libdir"}
@@ -1558,11 +1557,11 @@ set_default libdir
 set_default $PATHS_LIST
 set_default nm
 
-disabled optimizations || enabled ossfuzz || echo "$CFLAGS" | grep -q -- '-fsanitize=' || check_allcflags -fomit-frame-pointer
+disabled optimizations || enabled ossfuzz || echo "$CFLAGS" | grep -q -- '-fsanitize=' || platform_check_allcflags -fomit-frame-pointer
 
 enabled pic && enable_weak_pic
 
-test_cc <<EOF || die "Symbol mangling check failed."
+platform_test_cc <<EOF || die "Symbol mangling check failed."
 int ff_extern;
 EOF
 sym=$($nm $TMPO | awk '/[ \t]+[^ \t]?ff_extern$/{ print substr($0, match($0, /[^ \t]?ff_extern$/)) }')
@@ -1570,13 +1569,13 @@ extern_prefix=${sym%%ff_extern*}
 
 log "Symbol prefix detected as: '${extern_prefix}'"
 
-! disabled inline_asm && check_inline_asm inline_asm '"" ::'
+! disabled inline_asm && platform_check_inline_asm inline_asm '"" ::'
 
-check_cc pragma_deprecated "" '_Pragma("GCC diagnostic push") _Pragma("GCC diagnostic ignored \"-Wdeprecated-declarations\"")'
+platform_check_cc pragma_deprecated "" '_Pragma("GCC diagnostic push") _Pragma("GCC diagnostic ignored \"-Wdeprecated-declarations\"")'
 
-test_cpp_condition stdlib.h "defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)" && enable bigendian
+platform_test_cpp_condition stdlib.h "defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)" && enable bigendian
 
-check_cc const_nan math.h "struct { double d; } static const bar[] = { { NAN } }"
+platform_check_cc const_nan math.h "struct { double d; } static const bar[] = { { NAN } }"
 
 if ! enabled ppc64 || enabled bigendian; then
     disable vsx
@@ -1597,26 +1596,26 @@ if enabled_any arm aarch64 || enabled_all ppc altivec && enabled asm; then
     [ $target_os = "darwin" ] && gaspp_as_type="apple-$gaspp_as_type"
 
     test "${as#*gas-preprocessor.pl}" != "$as" ||
-    test_cmd gas-preprocessor.pl -arch $arch -as-type $gaspp_as_type -- ${as:=$cc} $as_noop &&
+    platform_test_cmd gas-preprocessor.pl -arch $arch -as-type $gaspp_as_type -- ${as:=$cc} $as_noop &&
         gas="${gas:=gas-preprocessor.pl} -arch $arch -as-type $gaspp_as_type -- ${as:=$cc}"
 
-    if ! check_gas ; then
+    if ! platform_check_gas ; then
         as=${gas:=$as}
-        check_gas || \
+        platform_check_gas || \
             $nogas "GNU assembler not found, install/update gas-preprocessor"
     fi
 
-    check_as as_func ".func test
+    platform_check_as as_func ".func test
                       .endfunc"
 fi
 
-check_inline_asm inline_asm_labels '"1:\n"'
+platform_check_inline_asm inline_asm_labels '"1:\n"'
 
-check_inline_asm inline_asm_nonlocal_labels '"Label:\n"'
+platform_check_inline_asm inline_asm_nonlocal_labels '"Label:\n"'
 
 if enabled aarch64; then
     as_arch_level="armv8-a"
-    check_as as_arch_directive ".arch $as_arch_level"
+    platform_check_as as_arch_directive ".arch $as_arch_level"
     if enabled as_arch_directive; then
         # Check for higher .arch levels. We only need armv8.2-a in order to
         # enable the extensions we want below - we primarily want to control
@@ -1626,7 +1625,7 @@ if enabled aarch64; then
         # didn't support controlling the dotprod/i8mm extensions via
         # .arch_extension; thus try to enable them via the .arch level as well.
         for level in armv8.2-a armv8.4-a armv8.6-a; do
-            check_arch_level $level
+            platform_check_arch_level $level
         done
         # Clang before version 17 (Xcode versions up to and including 15.0)
         # also had a bug (https://github.com/llvm/llvm-project/issues/32220)
@@ -1635,24 +1634,24 @@ if enabled aarch64; then
         # ".arch_extension" directive. Check if we can include "+fp" as dummy
         # feature to make the .arch directive behave as expected and take
         # effect right away.
-        check_arch_level "${as_arch_level}+fp"
+        platform_check_arch_level "${as_arch_level}+fp"
     fi
 
-    enabled armv8 && check_insn armv8 'prfm   pldl1strm, [x0]'
+    enabled armv8 && platform_check_insn armv8 'prfm   pldl1strm, [x0]'
     # internal assembler in clang 3.3 does not support this instruction
-    enabled neon && check_insn neon 'ext   v0.8B, v0.8B, v1.8B, #1'
+    enabled neon && platform_check_insn neon 'ext   v0.8B, v0.8B, v1.8B, #1'
 
     archext_list="arm_crc dotprod i8mm sve sve2 sme"
-    enabled arm_crc && check_archext_name_insn arm_crc crc 'crc32x w0, w0, x0'
-    enabled dotprod && check_archext_insn dotprod 'udot v0.4s, v0.16b, v0.16b'
-    enabled i8mm    && check_archext_insn i8mm    'usdot v0.4s, v0.16b, v0.16b'
-    enabled sve     && check_archext_insn sve     'whilelt p0.s, x0, x1'
-    enabled sve2    && check_archext_insn sve2    'sqrdmulh z0.s, z0.s, z0.s'
-    enabled sme     && check_archext_insn sme     'smstart' 'cntb x0'
+    enabled arm_crc && platform_check_archext_name_insn arm_crc crc 'crc32x w0, w0, x0'
+    enabled dotprod && platform_check_archext_insn dotprod 'udot v0.4s, v0.16b, v0.16b'
+    enabled i8mm    && platform_check_archext_insn i8mm    'usdot v0.4s, v0.16b, v0.16b'
+    enabled sve     && platform_check_archext_insn sve     'whilelt p0.s, x0, x1'
+    enabled sve2    && platform_check_archext_insn sve2    'sqrdmulh z0.s, z0.s, z0.s'
+    enabled sme     && platform_check_archext_insn sme     'smstart' 'cntb x0'
 
     # Disable the main feature (e.g. HAVE_NEON) if neither inline nor external
     # assembly support the feature out of the box. Skip this for the features
-    # checked with check_archext_insn above, as that function takes care of
+    # checked with platform_check_archext_insn above, as that function takes care of
     # updating all the variables as necessary.
     for v in $ARCH_EXT_LIST_ARM; do
         is_in $v $archext_list && continue
@@ -1661,20 +1660,20 @@ if enabled aarch64; then
 
 elif enabled arm; then
 
-    enabled msvc && check_cpp_condition thumb stddef.h "defined _M_ARMT"
-    test_cpp_condition stddef.h "defined __thumb__" && test_cc <<EOF && enable_weak thumb
+    enabled msvc && platform_check_cpp_condition thumb stddef.h "defined _M_ARMT"
+    platform_test_cpp_condition stddef.h "defined __thumb__" && platform_test_cc <<EOF && enable_weak thumb
 float func(float a, float b){ return a+b; }
 EOF
-    enabled thumb && check_cflags -mthumb || check_cflags -marm
+    enabled thumb && platform_check_cflags -mthumb || platform_check_cflags -marm
 
-    if check_cpp_condition vfp_args stddef.h "defined __ARM_PCS_VFP"; then
+    if platform_check_cpp_condition vfp_args stddef.h "defined __ARM_PCS_VFP"; then
         :
-    elif check_cpp_condition vfp_args stddef.h "defined _M_ARM_FP && _M_ARM_FP >= 30"; then
+    elif platform_check_cpp_condition vfp_args stddef.h "defined _M_ARM_FP && _M_ARM_FP >= 30"; then
         :
-    elif ! test_cpp_condition stddef.h "defined __ARM_PCS || defined __SOFTFP__" && [ $target_os != darwin ]; then
+    elif ! platform_test_cpp_condition stddef.h "defined __ARM_PCS || defined __SOFTFP__" && [ $target_os != darwin ]; then
         case "${cross_prefix:-$cc}" in
             *hardfloat*) enable vfp_args; fpabi=vfp ;;
-            *) check_ld "cc" vfp_args <<EOF && fpabi=vfp || fpabi=soft ;;
+            *) platform_check_ld "cc" vfp_args <<EOF && fpabi=vfp || fpabi=soft ;;
 __asm__ (".eabi_attribute 28, 1");
 int main(void) { return 0; }
 EOF
@@ -1688,13 +1687,13 @@ EOF
     # external assembly. This means that if the ${v}_external feature is set,
     # that feature can be used unconditionally in various support macros
     # anywhere in external assembly, in any function.
-    enabled armv5te && check_insn armv5te 'qadd r0, r0, r0'
-    enabled armv6   && check_insn armv6   'sadd16 r0, r0, r0'
-    enabled armv6t2 && check_insn armv6t2 'movt r0, #0'
-    enabled neon    && check_insn neon    'vadd.i16 q0, q0, q0'
-    enabled vfp     && check_insn vfp     'fadds s0, s0, s0'
-    enabled vfpv3   && check_insn vfpv3   'vmov.f32 s0, #1.0'
-    enabled setend  && check_insn setend  'setend be'
+    enabled armv5te && platform_check_insn armv5te 'qadd r0, r0, r0'
+    enabled armv6   && platform_check_insn armv6   'sadd16 r0, r0, r0'
+    enabled armv6t2 && platform_check_insn armv6t2 'movt r0, #0'
+    enabled neon    && platform_check_insn neon    'vadd.i16 q0, q0, q0'
+    enabled vfp     && platform_check_insn vfp     'fadds s0, s0, s0'
+    enabled vfpv3   && platform_check_insn vfpv3   'vmov.f32 s0, #1.0'
+    enabled setend  && platform_check_insn setend  'setend be'
 
     # If neither inline nor external assembly can use the feature by default,
     # disable the main unsuffixed feature (e.g. HAVE_NEON).
@@ -1708,15 +1707,15 @@ EOF
         map 'enabled_any ${v}_external ${v}_inline || disable $v' \
             $ARCH_EXT_LIST_ARM
 
-    check_inline_asm asm_mod_q '"add r0, %Q0, %R0" :: "r"((long long)0)'
+    platform_check_inline_asm asm_mod_q '"add r0, %Q0, %R0" :: "r"((long long)0)'
 
-    check_as as_arch_directive ".arch armv7-a"
-    check_as as_dn_directive   "ra .dn d0.i16"
-    check_as as_fpu_directive  ".fpu neon"
+    platform_check_as as_arch_directive ".arch armv7-a"
+    platform_check_as as_dn_directive   "ra .dn d0.i16"
+    platform_check_as as_fpu_directive  ".fpu neon"
 
     # llvm's integrated assembler supports .object_arch from llvm 3.5
     [ "$objformat" = elf32 ] || [ "$objformat" = elf64 ] &&
-        check_as as_object_arch ".object_arch armv4"
+        platform_check_as as_object_arch ".object_arch armv4"
 
     # MS armasm fails to assemble our PIC constructs
     [ $target_os != win32 ] && enabled_all armv6t2 shared !pic && enable_weak_pic
@@ -1725,39 +1724,39 @@ elif enabled mips; then
 
     # Check toolchain ISA level
     if enabled mips64; then
-        enabled mips64r6 && check_inline_asm mips64r6 '"dlsa $0, $0, $0, 1"' &&
+        enabled mips64r6 && platform_check_inline_asm mips64r6 '"dlsa $0, $0, $0, 1"' &&
             disable mips64r2
 
-        enabled mips64r2 && check_inline_asm mips64r2 '"dext $0, $0, 0, 1"'
+        enabled mips64r2 && platform_check_inline_asm mips64r2 '"dext $0, $0, 0, 1"'
 
         disable mips32r6 && disable mips32r5 && disable mips32r2
     else
-        enabled mips32r6 && check_inline_asm mips32r6 '"aui $0, $0, 0"' &&
+        enabled mips32r6 && platform_check_inline_asm mips32r6 '"aui $0, $0, 0"' &&
             disable mips32r5 && disable mips32r2
 
-        enabled mips32r5 && check_inline_asm mips32r5 '"eretnc"'
-        enabled mips32r2 && check_inline_asm mips32r2 '"ext $0, $0, 0, 1"'
+        enabled mips32r5 && platform_check_inline_asm mips32r5 '"eretnc"'
+        enabled mips32r2 && platform_check_inline_asm mips32r2 '"ext $0, $0, 0, 1"'
 
         disable mips64r6 && disable mips64r5 && disable mips64r2
     fi
 
-    enabled mipsfpu && check_inline_asm mipsfpu '"cvt.d.l $f0, $f2"'
-    enabled mipsfpu && (enabled mips32r5 || enabled mips32r6 || enabled mips64r6) && check_inline_asm_flags mipsfpu '"cvt.d.l $f0, $f1"' '-mfp64'
+    enabled mipsfpu && platform_check_inline_asm mipsfpu '"cvt.d.l $f0, $f2"'
+    enabled mipsfpu && (enabled mips32r5 || enabled mips32r6 || enabled mips64r6) && platform_check_inline_asm_flags mipsfpu '"cvt.d.l $f0, $f1"' '-mfp64'
 
-    enabled mipsdsp && check_inline_asm_flags mipsdsp '"addu.qb $t0, $t1, $t2"' '-mdsp'
-    enabled mipsdspr2 && check_inline_asm_flags mipsdspr2 '"absq_s.qb $t0, $t1"' '-mdspr2'
+    enabled mipsdsp && platform_check_inline_asm_flags mipsdsp '"addu.qb $t0, $t1, $t2"' '-mdsp'
+    enabled mipsdspr2 && platform_check_inline_asm_flags mipsdspr2 '"absq_s.qb $t0, $t1"' '-mdspr2'
 
     # MSA can be detected at runtime so we supply extra flags here
-    enabled mipsfpu && enabled msa && check_inline_asm msa '"addvi.b $w0, $w1, 1"' '-mmsa' && append MSAFLAGS '-mmsa'
+    enabled mipsfpu && enabled msa && platform_check_inline_asm msa '"addvi.b $w0, $w1, 1"' '-mmsa' && append MSAFLAGS '-mmsa'
 
     # loongson2 have no switch cflag so we can only probe toolchain ability
-    enabled loongson2 && check_inline_asm loongson2 '"dmult.g $8, $9, $10"' && disable loongson3
+    enabled loongson2 && platform_check_inline_asm loongson2 '"dmult.g $8, $9, $10"' && disable loongson3
 
     # loongson3 is paired with MMI
-    enabled loongson3 && check_inline_asm loongson3 '"gsldxc1 $f0, 0($2, $3)"' '-mloongson-ext' && append MMIFLAGS '-mloongson-ext'
+    enabled loongson3 && platform_check_inline_asm loongson3 '"gsldxc1 $f0, 0($2, $3)"' '-mloongson-ext' && append MMIFLAGS '-mloongson-ext'
 
     # MMI can be detected at runtime too
-    enabled mmi && check_inline_asm mmi '"pxor $f0, $f0, $f0"' '-mloongson-mmi' && append MMIFLAGS '-mloongson-mmi'
+    enabled mmi && platform_check_inline_asm mmi '"pxor $f0, $f0, $f0"' '-mloongson-mmi' && append MMIFLAGS '-mloongson-mmi'
 
     if enabled bigendian && enabled msa; then
         disable msa
@@ -1767,22 +1766,22 @@ elif enabled parisc; then
 
     if enabled gcc; then
         case $($cc -dumpversion) in
-            4.[3-9].*) check_cflags -fno-optimize-sibling-calls ;;
+            4.[3-9].*) platform_check_cflags -fno-optimize-sibling-calls ;;
         esac
     fi
 
 elif enabled ppc; then
 
-    check_inline_asm dcbzl     '"dcbzl 0, %0" :: "r"(0)'
-    check_inline_asm ibm_asm   '"add 0, 0, 0"'
-    check_inline_asm ppc4xx    '"maclhw r10, r11, r12"'
-    check_inline_asm xform_asm '"lwzx %1, %y0" :: "Z"(*(int*)0), "r"(0)'
+    platform_check_inline_asm dcbzl     '"dcbzl 0, %0" :: "r"(0)'
+    platform_check_inline_asm ibm_asm   '"add 0, 0, 0"'
+    platform_check_inline_asm ppc4xx    '"maclhw r10, r11, r12"'
+    platform_check_inline_asm xform_asm '"lwzx %1, %y0" :: "Z"(*(int*)0), "r"(0)'
 
     if enabled altivec; then
-        check_cflags -maltivec -mabi=altivec
+        platform_check_cflags -maltivec -mabi=altivec
 
         # check if our compiler supports Motorola AltiVec C API
-        check_cc altivec altivec.h "vector signed int v1 = (vector signed int) { 0 };
+        platform_check_cc altivec altivec.h "vector signed int v1 = (vector signed int) { 0 };
                                     vector signed int v2 = (vector signed int) { 1 };
                                     v1 = vec_add(v1, v2);"
 
@@ -1790,68 +1789,68 @@ elif enabled ppc; then
     fi
 
     if enabled vsx; then
-        check_cflags -mvsx &&
-        check_cc vsx altivec.h "int v[4] = { 0 };
+        platform_check_cflags -mvsx &&
+        platform_check_cc vsx altivec.h "int v[4] = { 0 };
                                 vector signed int v1 = vec_vsx_ld(0, v);"
     fi
 
     if enabled power8; then
-        check_cpp_condition power8 "altivec.h" "defined(_ARCH_PWR8)"
+        platform_check_cpp_condition power8 "altivec.h" "defined(_ARCH_PWR8)"
     fi
 
     if enabled altivec; then
-        check_cc vec_xl altivec.h "const unsigned char *y1i = { 0 };
+        platform_check_cc vec_xl altivec.h "const unsigned char *y1i = { 0 };
                                    vector unsigned char y0 = vec_xl(0, y1i);"
     fi
 
 elif enabled riscv; then
 
-    enabled rv && check_inline_asm rv '".option arch, +zbb\nrev8 t0, t1"'
-    enabled rvv && check_inline_asm rvv '".option arch, +v\nvsetivli zero, 0, e8, m1, ta, ma"'
-    enabled rv_zicbop && check_inline_asm rv_zicbop '".option arch, +zicbop\nprefetch.r 64(a0)"'
-    enabled rv_zvbb && check_inline_asm rv_zvbb '".option arch, +zvbb\nvclz.v v0, v8"'
+    enabled rv && platform_check_inline_asm rv '".option arch, +zbb\nrev8 t0, t1"'
+    enabled rvv && platform_check_inline_asm rvv '".option arch, +v\nvsetivli zero, 0, e8, m1, ta, ma"'
+    enabled rv_zicbop && platform_check_inline_asm rv_zicbop '".option arch, +zicbop\nprefetch.r 64(a0)"'
+    enabled rv_zvbb && platform_check_inline_asm rv_zvbb '".option arch, +zvbb\nvclz.v v0, v8"'
 
 elif enabled wasm; then
 
-    enabled simd128 && check_cc simd128 wasm_simd128.h  "v128_t v = wasm_v128_load(0);"
+    enabled simd128 && platform_check_cc simd128 wasm_simd128.h  "v128_t v = wasm_v128_load(0);"
 
 elif enabled x86; then
 
-    check_builtin rdtsc    intrin.h   "__rdtsc()"
-    check_builtin mm_empty mmintrin.h "_mm_empty()"
+    platform_check_builtin rdtsc    intrin.h   "__rdtsc()"
+    platform_check_builtin mm_empty mmintrin.h "_mm_empty()"
 
     # check whether EBP is available on x86
     # As 'i' is stored on the stack, this program will crash
     # if the base pointer is used to access it because the
     # base pointer is cleared in the inline assembly code.
-    check_exec_crash <<EOF && enable ebp_available
+    platform_check_exec_crash <<EOF && enable ebp_available
 volatile int i=0;
 __asm__ volatile ("xorl %%ebp, %%ebp" ::: "%ebp");
 return i;
 EOF
 
     # check whether EBX is available on x86
-    check_inline_asm ebx_available '""::"b"(0)' &&
-        check_inline_asm ebx_available '"":::"%ebx"'
+    platform_check_inline_asm ebx_available '""::"b"(0)' &&
+        platform_check_inline_asm ebx_available '"":::"%ebx"'
 
     # check whether xmm clobbers are supported
-    check_inline_asm xmm_clobbers '"":::"%xmm0"'
+    platform_check_inline_asm xmm_clobbers '"":::"%xmm0"'
 
-    check_inline_asm inline_asm_direct_symbol_refs '"movl '$extern_prefix'test, %eax"' ||
-        check_inline_asm inline_asm_direct_symbol_refs '"movl '$extern_prefix'test(%rip), %eax"'
+    platform_check_inline_asm inline_asm_direct_symbol_refs '"movl '$extern_prefix'test, %eax"' ||
+        platform_check_inline_asm inline_asm_direct_symbol_refs '"movl '$extern_prefix'test(%rip), %eax"'
 
     # check whether binutils is new enough to compile SSSE3/MMXEXT
-    enabled ssse3  && check_inline_asm ssse3_inline  '"pabsw %xmm0, %xmm0"'
-    enabled mmxext && check_inline_asm mmxext_inline '"pmaxub %mm0, %mm1"'
+    enabled ssse3  && platform_check_inline_asm ssse3_inline  '"pabsw %xmm0, %xmm0"'
+    enabled mmxext && platform_check_inline_asm mmxext_inline '"pmaxub %mm0, %mm1"'
 
     probe_x86asm(){
         x86asmexe_probe=$1
-        if test_cmd $x86asmexe_probe -v; then
+        if platform_test_cmd $x86asmexe_probe -v; then
             x86asmexe=$x86asmexe_probe
             x86asm_debug="-g -F dwarf"
             X86ASM_DEPFLAGS='-MD $(@:.o=.d)'
         fi
-        check_x86asm x86asm "movbe ecx, [5]"
+        platform_check_x86asm x86asm "movbe ecx, [5]"
     }
 
     if ! disabled_any asm mmx x86asm; then
@@ -1866,11 +1865,11 @@ EOF
             elf*) enabled debug && append X86ASMFLAGS $x86asm_debug ;;
         esac
 
-        enabled avx512    && check_x86asm avx512_external    "vmovdqa32 [eax]{k1}{z}, zmm0"
-        enabled avx512icl && check_x86asm avx512icl_external "vpdpwssds zmm31{k1}{z}, zmm29, zmm28"
-        enabled avx2      && check_x86asm avx2_external      "vextracti128 xmm0, ymm0, 0"
-        enabled xop       && check_x86asm xop_external       "vpmacsdd xmm0, xmm1, xmm2, xmm3"
-        enabled fma4      && check_x86asm fma4_external      "vfmaddps ymm0, ymm1, ymm2, ymm3"
+        enabled avx512    && platform_check_x86asm avx512_external    "vmovdqa32 [eax]{k1}{z}, zmm0"
+        enabled avx512icl && platform_check_x86asm avx512icl_external "vpdpwssds zmm31{k1}{z}, zmm29, zmm28"
+        enabled avx2      && platform_check_x86asm avx2_external      "vextracti128 xmm0, ymm0, 0"
+        enabled xop       && platform_check_x86asm xop_external       "vpmacsdd xmm0, xmm1, xmm2, xmm3"
+        enabled fma4      && platform_check_x86asm fma4_external      "vfmaddps ymm0, ymm1, ymm2, ymm3"
     fi
 
     case "$cpu" in
@@ -1879,70 +1878,70 @@ EOF
         ;;
     esac
 
-    check_cc intrinsics_sse2 emmintrin.h "__m128i test = _mm_setzero_si128()"
+    platform_check_cc intrinsics_sse2 emmintrin.h "__m128i test = _mm_setzero_si128()"
 
 elif enabled loongarch; then
-    enabled lsx && check_inline_asm lsx '"vadd.b $vr0, $vr1, $vr2"' '-mlsx' && append LSXFLAGS '-mlsx'
-    enabled lasx && check_inline_asm lasx '"xvadd.b $xr0, $xr1, $xr2"' '-mlasx' && append LASXFLAGS '-mlasx'
+    enabled lsx && platform_check_inline_asm lsx '"vadd.b $vr0, $vr1, $vr2"' '-mlsx' && append LSXFLAGS '-mlsx'
+    enabled lasx && platform_check_inline_asm lasx '"xvadd.b $xr0, $xr1, $xr2"' '-mlasx' && append LASXFLAGS '-mlasx'
 fi
 
-check_cc intrinsics_neon arm_neon.h "int16x8_t test = vdupq_n_s16(0)"
+platform_check_cc intrinsics_neon arm_neon.h "int16x8_t test = vdupq_n_s16(0)"
 
-check_ldflags -Wl,--as-needed
-check_ldflags -Wl,-z,noexecstack
+platform_check_ldflags -Wl,--as-needed
+platform_check_ldflags -Wl,-z,noexecstack
 if [ $target_os = "darwin" ]; then
-    check_ldflags -Wl,-no_warn_duplicate_libraries
+    platform_check_ldflags -Wl,-no_warn_duplicate_libraries
 fi
 
 phase 'Checking system features and libraries'
 if ! disabled network; then
-    check_func getaddrinfo $network_extralibs
-    check_func inet_aton $network_extralibs
+    platform_check_func getaddrinfo $network_extralibs
+    platform_check_func inet_aton $network_extralibs
 
-    check_type netdb.h "struct addrinfo"
-    check_type netinet/in.h "struct group_source_req" -D_BSD_SOURCE
-    check_type netinet/in.h "struct ip_mreq_source" -D_BSD_SOURCE
-    check_type netinet/in.h "struct ipv6_mreq" -D_DARWIN_C_SOURCE
-    check_type poll.h "struct pollfd"
-    check_type netinet/sctp.h "struct sctp_event_subscribe"
-    check_struct "sys/socket.h" "struct msghdr" msg_flags
-    check_struct "sys/types.h sys/socket.h" "struct sockaddr" sa_len
-    check_type netinet/in.h "struct sockaddr_in6"
-    check_type "sys/types.h sys/socket.h" "struct sockaddr_storage"
-    check_type "sys/types.h sys/socket.h" socklen_t
+    platform_check_type netdb.h "struct addrinfo"
+    platform_check_type netinet/in.h "struct group_source_req" -D_BSD_SOURCE
+    platform_check_type netinet/in.h "struct ip_mreq_source" -D_BSD_SOURCE
+    platform_check_type netinet/in.h "struct ipv6_mreq" -D_DARWIN_C_SOURCE
+    platform_check_type poll.h "struct pollfd"
+    platform_check_type netinet/sctp.h "struct sctp_event_subscribe"
+    platform_check_struct "sys/socket.h" "struct msghdr" msg_flags
+    platform_check_struct "sys/types.h sys/socket.h" "struct sockaddr" sa_len
+    platform_check_type netinet/in.h "struct sockaddr_in6"
+    platform_check_type "sys/types.h sys/socket.h" "struct sockaddr_storage"
+    platform_check_type "sys/types.h sys/socket.h" socklen_t
 
     # Prefer arpa/inet.h over winsock2
-    if check_headers arpa/inet.h ; then
-        check_func closesocket
-    elif check_headers winsock2.h ; then
-        check_func_headers winsock2.h closesocket -lws2 &&
+    if platform_check_headers arpa/inet.h ; then
+        platform_check_func closesocket
+    elif platform_check_headers winsock2.h ; then
+        platform_check_func_headers winsock2.h closesocket -lws2 &&
             network_extralibs="-lws2" ||
-        { check_func_headers winsock2.h closesocket -lws2_32 &&
+        { platform_check_func_headers winsock2.h closesocket -lws2_32 &&
             network_extralibs="-lws2_32"; } || disable winsock2_h network
-        check_func_headers ws2tcpip.h getaddrinfo $network_extralibs
+        platform_check_func_headers ws2tcpip.h getaddrinfo $network_extralibs
 
-        check_type ws2tcpip.h socklen_t
-        check_type ws2tcpip.h "struct addrinfo"
-        check_type ws2tcpip.h "struct group_source_req"
-        check_type ws2tcpip.h "struct ip_mreq_source"
-        check_type ws2tcpip.h "struct ipv6_mreq"
-        check_type winsock2.h "struct pollfd"
-        check_struct winsock2.h "struct sockaddr" sa_len
-        check_type ws2tcpip.h "struct sockaddr_in6"
-        check_type ws2tcpip.h "struct sockaddr_storage"
+        platform_check_type ws2tcpip.h socklen_t
+        platform_check_type ws2tcpip.h "struct addrinfo"
+        platform_check_type ws2tcpip.h "struct group_source_req"
+        platform_check_type ws2tcpip.h "struct ip_mreq_source"
+        platform_check_type ws2tcpip.h "struct ipv6_mreq"
+        platform_check_type winsock2.h "struct pollfd"
+        platform_check_struct winsock2.h "struct sockaddr" sa_len
+        platform_check_type ws2tcpip.h "struct sockaddr_in6"
+        platform_check_type ws2tcpip.h "struct sockaddr_storage"
     else
         disable network
     fi
 fi
 
-check_builtin MemoryBarrier windows.h "MemoryBarrier()"
-check_builtin gmtime_r time.h "time_t *time; struct tm *tm; gmtime_r(time, tm)"
-check_builtin localtime_r time.h "time_t *time; struct tm *tm; localtime_r(time, tm)"
+platform_check_builtin MemoryBarrier windows.h "MemoryBarrier()"
+platform_check_builtin gmtime_r time.h "time_t *time; struct tm *tm; gmtime_r(time, tm)"
+platform_check_builtin localtime_r time.h "time_t *time; struct tm *tm; localtime_r(time, tm)"
 
-check_builtin float16 "" "_Float16 f16var"
+platform_check_builtin float16 "" "_Float16 f16var"
 if enabled float16; then
     if enabled x86; then
-        test_cpp_condition stddef.h "defined(__F16C__)" && enable fast_float16
+        platform_test_cpp_condition stddef.h "defined(__F16C__)" && enable fast_float16
     elif enabled arm || enabled aarch64; then
         enable fast_float16
     fi
@@ -1954,14 +1953,14 @@ case "$custom_allocator" in
     jemalloc)
         test -n "$malloc_prefix" ||
             malloc_prefix=$($pkg_config --variable=jemalloc_prefix $pkg_config_flags jemalloc 2>/dev/null)
-        require_pkg_config custom_allocator jemalloc jemalloc/jemalloc.h ${malloc_prefix}malloc
+        platform_require_pkg_config custom_allocator jemalloc jemalloc/jemalloc.h ${malloc_prefix}malloc
     ;;
     tcmalloc)
-        require_pkg_config custom_allocator libtcmalloc gperftools/tcmalloc.h tc_malloc
+        platform_require_pkg_config custom_allocator libtcmalloc gperftools/tcmalloc.h tc_malloc
         malloc_prefix=tc_
     ;;
     *)
-        require_pkg_config custom_allocator "$custom_allocator" stdlib.h malloc
+        platform_require_pkg_config custom_allocator "$custom_allocator" stdlib.h malloc
     ;;
 esac
 
@@ -1978,208 +1977,208 @@ fi
 # Disable it explicitly to fix this.
 disable spirv_library
 
-check_func_headers malloc.h _aligned_malloc     && enable aligned_malloc
-check_func  ${malloc_prefix}memalign            && enable memalign
-check_func  ${malloc_prefix}posix_memalign      && enable posix_memalign
+platform_check_func_headers malloc.h _aligned_malloc     && enable aligned_malloc
+platform_check_func  ${malloc_prefix}memalign            && enable memalign
+platform_check_func  ${malloc_prefix}posix_memalign      && enable posix_memalign
 
-check_func  access
-check_func_headers stdlib.h arc4random_buf
-check_lib   clock_gettime time.h clock_gettime || check_lib clock_gettime time.h clock_gettime -lrt
-check_func  fcntl
-check_func  fork
-check_func  gethrtime
-check_func  getopt
-check_func  getrusage
-check_func  gettimeofday
-check_func  isatty
-check_func  mkstemp
-check_func  mmap
-check_func  mprotect
+platform_check_func  access
+platform_check_func_headers stdlib.h arc4random_buf
+platform_check_lib   clock_gettime time.h clock_gettime || platform_check_lib clock_gettime time.h clock_gettime -lrt
+platform_check_func  fcntl
+platform_check_func  fork
+platform_check_func  gethrtime
+platform_check_func  getopt
+platform_check_func  getrusage
+platform_check_func  gettimeofday
+platform_check_func  isatty
+platform_check_func  mkstemp
+platform_check_func  mmap
+platform_check_func  mprotect
 # Solaris has nanosleep in -lrt, OpenSolaris no longer needs that
-check_func_headers time.h nanosleep || check_lib nanosleep time.h nanosleep -lrt
-check_func_headers sys/prctl.h prctl
-check_func  sched_getaffinity
-check_func  setrlimit
-check_struct "sys/stat.h" "struct stat" st_mtim.tv_nsec -D_BSD_SOURCE
-check_func  strerror_r
-check_func  sysconf
-check_func  sysctl
-check_func  tempnam
-check_func  usleep
+platform_check_func_headers time.h nanosleep || platform_check_lib nanosleep time.h nanosleep -lrt
+platform_check_func_headers sys/prctl.h prctl
+platform_check_func  sched_getaffinity
+platform_check_func  setrlimit
+platform_check_struct "sys/stat.h" "struct stat" st_mtim.tv_nsec -D_BSD_SOURCE
+platform_check_func  strerror_r
+platform_check_func  sysconf
+platform_check_func  sysctl
+platform_check_func  tempnam
+platform_check_func  usleep
 
-check_func_headers conio.h kbhit
-check_func_headers io.h setmode
-check_func_headers lzo/lzo1x.h lzo1x_999_compress
-check_func_headers mach/mach_time.h mach_absolute_time
-check_func_headers stdlib.h getenv
-check_func_headers sys/stat.h lstat
-check_func_headers sys/auxv.h getauxval
-check_func_headers sys/auxv.h elf_aux_info
-check_func_headers sys/sysctl.h sysctlbyname
+platform_check_func_headers conio.h kbhit
+platform_check_func_headers io.h setmode
+platform_check_func_headers lzo/lzo1x.h lzo1x_999_compress
+platform_check_func_headers mach/mach_time.h mach_absolute_time
+platform_check_func_headers stdlib.h getenv
+platform_check_func_headers sys/stat.h lstat
+platform_check_func_headers sys/auxv.h getauxval
+platform_check_func_headers sys/auxv.h elf_aux_info
+platform_check_func_headers sys/sysctl.h sysctlbyname
 
-check_func_headers windows.h GetModuleHandle
-check_func_headers windows.h GetProcessAffinityMask
-check_func_headers windows.h GetProcessTimes
-check_func_headers windows.h GetStdHandle
-check_func_headers windows.h GetSystemTimeAsFileTime
-check_func_headers windows.h LoadLibrary
-check_func_headers windows.h MapViewOfFile
-check_func_headers windows.h PeekNamedPipe
-check_func_headers windows.h SetConsoleTextAttribute
-check_func_headers windows.h SetConsoleCtrlHandler
-check_func_headers windows.h SetDllDirectory
-check_func_headers windows.h Sleep
-check_func_headers windows.h VirtualAlloc
-check_func_headers glob.h glob
+platform_check_func_headers windows.h GetModuleHandle
+platform_check_func_headers windows.h GetProcessAffinityMask
+platform_check_func_headers windows.h GetProcessTimes
+platform_check_func_headers windows.h GetStdHandle
+platform_check_func_headers windows.h GetSystemTimeAsFileTime
+platform_check_func_headers windows.h LoadLibrary
+platform_check_func_headers windows.h MapViewOfFile
+platform_check_func_headers windows.h PeekNamedPipe
+platform_check_func_headers windows.h SetConsoleTextAttribute
+platform_check_func_headers windows.h SetConsoleCtrlHandler
+platform_check_func_headers windows.h SetDllDirectory
+platform_check_func_headers windows.h Sleep
+platform_check_func_headers windows.h VirtualAlloc
+platform_check_func_headers glob.h glob
 
 if enabled xlib; then
-    check_pkg_config xlib_x11 x11 "X11/Xlib.h" XPending ||
-    check_lib xlib_x11 "X11/Xlib.h" XPending -lX11 ||
+    platform_check_pkg_config xlib_x11 x11 "X11/Xlib.h" XPending ||
+    platform_check_lib xlib_x11 "X11/Xlib.h" XPending -lX11 ||
         disable xlib
 
-    check_pkg_config xlib_xext xext "X11/Xlib.h X11/extensions/XShm.h" XShmAttach ||
-    check_lib xlib_xext "X11/Xlib.h X11/extensions/XShm.h" XShmAttach -lXext ||
+    platform_check_pkg_config xlib_xext xext "X11/Xlib.h X11/extensions/XShm.h" XShmAttach ||
+    platform_check_lib xlib_xext "X11/Xlib.h X11/extensions/XShm.h" XShmAttach -lXext ||
         disable xlib
 
-    check_pkg_config xlib_xv xv "X11/Xlib.h X11/extensions/Xvlib.h" XvGetPortAttribute ||
-    check_lib xlib_xv "X11/Xlib.h X11/extensions/Xvlib.h" XvGetPortAttribute -lXv ||
+    platform_check_pkg_config xlib_xv xv "X11/Xlib.h X11/extensions/Xvlib.h" XvGetPortAttribute ||
+    platform_check_lib xlib_xv "X11/Xlib.h X11/extensions/Xvlib.h" XvGetPortAttribute -lXv ||
         disable xlib
 fi
 
-check_headers direct.h
-check_headers dirent.h
-check_headers dxgidebug.h
-check_headers dxva.h
-check_headers dxva2api.h -D_WIN32_WINNT=0x0600
-check_headers io.h
+platform_check_headers direct.h
+platform_check_headers dirent.h
+platform_check_headers dxgidebug.h
+platform_check_headers dxva.h
+platform_check_headers dxva2api.h -D_WIN32_WINNT=0x0600
+platform_check_headers io.h
 enabled libdrm &&
-    check_headers linux/dma-buf.h
+    platform_check_headers linux/dma-buf.h
 
-check_headers linux/perf_event.h
-check_headers malloc.h
-check_headers mftransform.h
-check_headers net/udplite.h
-check_headers poll.h
-check_headers pthread_np.h
-check_headers sys/param.h
-check_headers sys/resource.h
-check_headers sys/select.h
-check_headers sys/time.h
-check_headers sys/un.h
-check_headers termios.h
-check_headers unistd.h
-check_headers valgrind/valgrind.h
-check_func_headers VideoToolbox/VTCompressionSession.h VTCompressionSessionPrepareToEncodeFrames -framework VideoToolbox
-check_func_headers VideoToolbox/VideoToolbox.h VTDecompressionSessionDecodeFrame -framework VideoToolbox
-check_func_headers VideoToolbox/VideoToolbox.h VTPixelTransferSessionCreate -framework VideoToolbox
-check_func_headers VideoToolbox/VideoToolbox.h VTPixelRotationSessionCreate -framework VideoToolbox
-check_headers windows.h
-check_headers asm/types.h
+platform_check_headers linux/perf_event.h
+platform_check_headers malloc.h
+platform_check_headers mftransform.h
+platform_check_headers net/udplite.h
+platform_check_headers poll.h
+platform_check_headers pthread_np.h
+platform_check_headers sys/param.h
+platform_check_headers sys/resource.h
+platform_check_headers sys/select.h
+platform_check_headers sys/time.h
+platform_check_headers sys/un.h
+platform_check_headers termios.h
+platform_check_headers unistd.h
+platform_check_headers valgrind/valgrind.h
+platform_check_func_headers VideoToolbox/VTCompressionSession.h VTCompressionSessionPrepareToEncodeFrames -framework VideoToolbox
+platform_check_func_headers VideoToolbox/VideoToolbox.h VTDecompressionSessionDecodeFrame -framework VideoToolbox
+platform_check_func_headers VideoToolbox/VideoToolbox.h VTPixelTransferSessionCreate -framework VideoToolbox
+platform_check_func_headers VideoToolbox/VideoToolbox.h VTPixelRotationSessionCreate -framework VideoToolbox
+platform_check_headers windows.h
+platform_check_headers asm/types.h
 
 # it seems there are versions of clang in some distros that try to use the
 # gcc headers, which explodes for stdatomic
 # so we also check that atomics actually work here
 #
-# some configurations also require linking to libatomic, so try
+# some configurations also platform_require linking to libatomic, so try
 # both with -latomic and without
 for LATOMIC in "-latomic" ""; do
-    check_builtin stdatomic stdatomic.h                                \
+    platform_check_builtin stdatomic stdatomic.h                                \
         "atomic_int foo, bar = -1; atomic_store(&foo, 0); foo += bar"  \
         $LATOMIC && eval stdatomic_extralibs="\$LATOMIC" && break
 done
 
-check_lib advapi32 "windows.h"            RegCloseKey          -ladvapi32
-check_lib bcrypt   "windows.h bcrypt.h"   BCryptGenRandom      -lbcrypt &&
-    check_cpp_condition bcrypt bcrypt.h "defined BCRYPT_RNG_ALGORITHM"
-check_lib ole32    "windows.h objbase.h"  CoTaskMemFree        -lole32
-check_lib shell32  "windows.h shellapi.h" CommandLineToArgvW   -lshell32
-check_lib psapi    "windows.h psapi.h"    GetProcessMemoryInfo -lpsapi
+platform_check_lib advapi32 "windows.h"            RegCloseKey          -ladvapi32
+platform_check_lib bcrypt   "windows.h bcrypt.h"   BCryptGenRandom      -lbcrypt &&
+    platform_check_cpp_condition bcrypt bcrypt.h "defined BCRYPT_RNG_ALGORITHM"
+platform_check_lib ole32    "windows.h objbase.h"  CoTaskMemFree        -lole32
+platform_check_lib shell32  "windows.h shellapi.h" CommandLineToArgvW   -lshell32
+platform_check_lib psapi    "windows.h psapi.h"    GetProcessMemoryInfo -lpsapi
 
-check_lib android android/native_window.h ANativeWindow_acquire -landroid
-check_lib mediandk "stdint.h media/NdkMediaFormat.h" AMediaFormat_new -lmediandk
-check_lib camera2ndk "stdbool.h stdint.h camera/NdkCameraManager.h" ACameraManager_create -lcamera2ndk
+platform_check_lib android android/native_window.h ANativeWindow_acquire -landroid
+platform_check_lib mediandk "stdint.h media/NdkMediaFormat.h" AMediaFormat_new -lmediandk
+platform_check_lib camera2ndk "stdbool.h stdint.h camera/NdkCameraManager.h" ACameraManager_create -lcamera2ndk
 
-enabled appkit       && check_apple_framework AppKit
-enabled audiotoolbox && check_apple_framework AudioToolbox
-enabled avfoundation && check_apple_framework AVFoundation
-enabled coreimage    && check_apple_framework CoreImage
-enabled metal        && check_apple_framework Metal
-enabled videotoolbox && check_apple_framework VideoToolbox
+enabled appkit       && platform_check_apple_framework AppKit
+enabled audiotoolbox && platform_check_apple_framework AudioToolbox
+enabled avfoundation && platform_check_apple_framework AVFoundation
+enabled coreimage    && platform_check_apple_framework CoreImage
+enabled metal        && platform_check_apple_framework Metal
+enabled videotoolbox && platform_check_apple_framework VideoToolbox
 
-check_apple_framework CoreFoundation
-check_apple_framework CoreMedia
-check_apple_framework CoreVideo
-check_apple_framework CoreAudio
+platform_check_apple_framework CoreFoundation
+platform_check_apple_framework CoreMedia
+platform_check_apple_framework CoreVideo
+platform_check_apple_framework CoreAudio
 
 enabled audiotoolbox && {
-    check_type AudioToolbox/AudioToolbox.h AudioObjectPropertyAddress
+    platform_check_type AudioToolbox/AudioToolbox.h AudioObjectPropertyAddress
 }
 
 enabled avfoundation && {
     disable coregraphics applicationservices
-    check_lib coregraphics        CoreGraphics/CoreGraphics.h               CGGetActiveDisplayList "-framework CoreGraphics" ||
-    check_lib applicationservices ApplicationServices/ApplicationServices.h CGGetActiveDisplayList "-framework ApplicationServices"
-    check_objc_class AVFoundation/AVFoundation.h AVCaptureSession
+    platform_check_lib coregraphics        CoreGraphics/CoreGraphics.h               CGGetActiveDisplayList "-framework CoreGraphics" ||
+    platform_check_lib applicationservices ApplicationServices/ApplicationServices.h CGGetActiveDisplayList "-framework ApplicationServices"
+    platform_check_objc_class AVFoundation/AVFoundation.h AVCaptureSession
 }
 
 enabled videotoolbox && {
-    check_lib coreservices CoreServices/CoreServices.h UTGetOSTypeFromString "-framework CoreServices"
-    check_func_headers CoreMedia/CMFormatDescription.h kCMVideoCodecType_HEVC "-framework CoreMedia"
-    check_func_headers CoreMedia/CMFormatDescription.h kCMVideoCodecType_HEVCWithAlpha "-framework CoreMedia"
-    check_func_headers CoreMedia/CMFormatDescription.h kCMVideoCodecType_VP9 "-framework CoreMedia"
-    check_func_headers CoreMedia/CMFormatDescription.h kCMVideoCodecType_AV1 "-framework CoreMedia"
-    check_func_headers CoreVideo/CVPixelBuffer.h kCVPixelFormatType_420YpCbCr10BiPlanarVideoRange "-framework CoreVideo"
-    check_func_headers CoreVideo/CVPixelBuffer.h kCVPixelFormatType_422YpCbCr8BiPlanarVideoRange "-framework CoreVideo"
-    check_func_headers CoreVideo/CVPixelBuffer.h kCVPixelFormatType_422YpCbCr10BiPlanarVideoRange "-framework CoreVideo"
-    check_func_headers CoreVideo/CVPixelBuffer.h kCVPixelFormatType_422YpCbCr16BiPlanarVideoRange "-framework CoreVideo"
-    check_func_headers CoreVideo/CVPixelBuffer.h kCVPixelFormatType_444YpCbCr8BiPlanarVideoRange "-framework CoreVideo"
-    check_func_headers CoreVideo/CVPixelBuffer.h kCVPixelFormatType_444YpCbCr10BiPlanarVideoRange "-framework CoreVideo"
-    check_func_headers CoreVideo/CVPixelBuffer.h kCVPixelFormatType_444YpCbCr16BiPlanarVideoRange "-framework CoreVideo"
-    check_func_headers CoreVideo/CVImageBuffer.h kCVImageBufferTransferFunction_SMPTE_ST_2084_PQ "-framework CoreVideo"
-    check_func_headers CoreVideo/CVImageBuffer.h kCVImageBufferTransferFunction_ITU_R_2100_HLG "-framework CoreVideo"
-    check_func_headers CoreVideo/CVImageBuffer.h kCVImageBufferTransferFunction_Linear "-framework CoreVideo"
-    check_func_headers CoreVideo/CVImageBuffer.h kCVImageBufferYCbCrMatrix_ITU_R_2020 "-framework CoreVideo"
-    check_func_headers CoreVideo/CVImageBuffer.h kCVImageBufferColorPrimaries_ITU_R_2020 "-framework CoreVideo"
-    check_func_headers CoreVideo/CVImageBuffer.h kCVImageBufferTransferFunction_ITU_R_2020 "-framework CoreVideo"
-    check_func_headers CoreVideo/CVImageBuffer.h kCVImageBufferTransferFunction_SMPTE_ST_428_1 "-framework CoreVideo"
-    check_func_headers VideoToolbox/VTCompressionProperties.h kVTQPModulationLevel_Default "-framework CoreVideo"
+    platform_check_lib coreservices CoreServices/CoreServices.h UTGetOSTypeFromString "-framework CoreServices"
+    platform_check_func_headers CoreMedia/CMFormatDescription.h kCMVideoCodecType_HEVC "-framework CoreMedia"
+    platform_check_func_headers CoreMedia/CMFormatDescription.h kCMVideoCodecType_HEVCWithAlpha "-framework CoreMedia"
+    platform_check_func_headers CoreMedia/CMFormatDescription.h kCMVideoCodecType_VP9 "-framework CoreMedia"
+    platform_check_func_headers CoreMedia/CMFormatDescription.h kCMVideoCodecType_AV1 "-framework CoreMedia"
+    platform_check_func_headers CoreVideo/CVPixelBuffer.h kCVPixelFormatType_420YpCbCr10BiPlanarVideoRange "-framework CoreVideo"
+    platform_check_func_headers CoreVideo/CVPixelBuffer.h kCVPixelFormatType_422YpCbCr8BiPlanarVideoRange "-framework CoreVideo"
+    platform_check_func_headers CoreVideo/CVPixelBuffer.h kCVPixelFormatType_422YpCbCr10BiPlanarVideoRange "-framework CoreVideo"
+    platform_check_func_headers CoreVideo/CVPixelBuffer.h kCVPixelFormatType_422YpCbCr16BiPlanarVideoRange "-framework CoreVideo"
+    platform_check_func_headers CoreVideo/CVPixelBuffer.h kCVPixelFormatType_444YpCbCr8BiPlanarVideoRange "-framework CoreVideo"
+    platform_check_func_headers CoreVideo/CVPixelBuffer.h kCVPixelFormatType_444YpCbCr10BiPlanarVideoRange "-framework CoreVideo"
+    platform_check_func_headers CoreVideo/CVPixelBuffer.h kCVPixelFormatType_444YpCbCr16BiPlanarVideoRange "-framework CoreVideo"
+    platform_check_func_headers CoreVideo/CVImageBuffer.h kCVImageBufferTransferFunction_SMPTE_ST_2084_PQ "-framework CoreVideo"
+    platform_check_func_headers CoreVideo/CVImageBuffer.h kCVImageBufferTransferFunction_ITU_R_2100_HLG "-framework CoreVideo"
+    platform_check_func_headers CoreVideo/CVImageBuffer.h kCVImageBufferTransferFunction_Linear "-framework CoreVideo"
+    platform_check_func_headers CoreVideo/CVImageBuffer.h kCVImageBufferYCbCrMatrix_ITU_R_2020 "-framework CoreVideo"
+    platform_check_func_headers CoreVideo/CVImageBuffer.h kCVImageBufferColorPrimaries_ITU_R_2020 "-framework CoreVideo"
+    platform_check_func_headers CoreVideo/CVImageBuffer.h kCVImageBufferTransferFunction_ITU_R_2020 "-framework CoreVideo"
+    platform_check_func_headers CoreVideo/CVImageBuffer.h kCVImageBufferTransferFunction_SMPTE_ST_428_1 "-framework CoreVideo"
+    platform_check_func_headers VideoToolbox/VTCompressionProperties.h kVTQPModulationLevel_Default "-framework CoreVideo"
 }
 
-enabled metal && test_cmd $metalcc -v || disable metal
+enabled metal && platform_test_cmd $metalcc -v || disable metal
 
-check_struct "sys/time.h sys/resource.h" "struct rusage" ru_maxrss
+platform_check_struct "sys/time.h sys/resource.h" "struct rusage" ru_maxrss
 
-check_type "windows.h dxva.h" "DXVA_PicParams_AV1" -DWINAPI_FAMILY=WINAPI_FAMILY_DESKTOP_APP -D_CRT_BUILD_DESKTOP_APP=0
-check_type "windows.h dxva.h" "DXVA_PicParams_HEVC" -DWINAPI_FAMILY=WINAPI_FAMILY_DESKTOP_APP -D_CRT_BUILD_DESKTOP_APP=0
-check_type "windows.h dxva.h" "DXVA_PicParams_VP9" -DWINAPI_FAMILY=WINAPI_FAMILY_DESKTOP_APP -D_CRT_BUILD_DESKTOP_APP=0
-check_type "windows.h dxgi1_2.h" "DXGI_OUTDUPL_FRAME_INFO"
-check_type "windows.h dxgi1_2.h" "IDXGIOutput1"
-check_type "windows.h dxgi1_5.h" "IDXGIOutput5"
-check_type "windows.h d3d11.h" "ID3D11VideoDecoder"
-check_type "windows.h d3d11.h" "ID3D11VideoContext"
-check_type "windows.h d3d12.h" "ID3D12Device"
-check_type "windows.h d3d12video.h" "ID3D12VideoDecoder"
-check_type "windows.h d3d12video.h" "ID3D12VideoEncoder"
-check_type "windows.h d3d12video.h" "ID3D12VideoProcessor"
-check_type "windows.h d3d12video.h" "ID3D12VideoMotionEstimator"
-test_code cc "windows.h d3d12video.h" "D3D12_FEATURE_VIDEO feature = D3D12_FEATURE_VIDEO_ENCODER_CODEC" && \
-test_code cc "windows.h d3d12video.h" "D3D12_FEATURE_DATA_VIDEO_ENCODER_RESOURCE_REQUIREMENTS req" && enable d3d12_encoder_feature
-test_code cc "windows.h d3d12video.h" "D3D12_VIDEO_ENCODER_CODEC c = D3D12_VIDEO_ENCODER_CODEC_AV1; (void)c;" && enable d3d12va_av1_headers
-test_code cc "windows.h d3d12video.h" "D3D12_FEATURE_DATA_VIDEO_ENCODER_INTRA_REFRESH_MODE check = { 0 };" && enable d3d12_intra_refresh
-test_code cc "windows.h d3d12video.h" "D3D12_VIDEO_ENCODER_MOTION_ESTIMATION_PRECISION_MODE m = D3D12_VIDEO_ENCODER_MOTION_ESTIMATION_PRECISION_MODE_EIGHTH_PIXEL; (void)m;" && enable d3d12va_me_precision_eighth_pixel
-test_code cc "windows.h d3d12video.h" "D3D12_FEATURE_DATA_VIDEO_MOTION_ESTIMATOR check = { 0 };" && enable d3d12_motion_estimator
-check_type "windows.h" "DPI_AWARENESS_CONTEXT" -D_WIN32_WINNT=0x0A00
-check_type "windows.h security.h schnlsp.h" SecPkgContext_KeyingMaterialInfo -DSECURITY_WIN32
-check_type "d3d9.h dxva2api.h" DXVA2_ConfigPictureDecode -D_WIN32_WINNT=0x0602
-check_func_headers mfapi.h MFCreateAlignedMemoryBuffer -lmfplat
-check_type "windows.h windows.graphics.capture.h" __x_ABI_CWindows_CGraphics_CCapture_CIGraphicsCaptureSession3 -D_WIN32_WINNT=0x0A00 -DWINDOWS_FOUNDATION_UNIVERSALAPICONTRACT_VERSION=0x130000 -DCOBJMACROS
-check_type "windows.h windows.graphics.capture.h" __x_ABI_CWindows_CGraphics_CCapture_CIGraphicsCaptureSession5 -D_WIN32_WINNT=0x0A00 -DWINDOWS_FOUNDATION_UNIVERSALAPICONTRACT_VERSION=0x130000 -DCOBJMACROS
-check_type "windows.h windows.graphics.capture.interop.h" IGraphicsCaptureItemInterop -D_WIN32_WINNT=0x0A00 -DWINDOWS_FOUNDATION_UNIVERSALAPICONTRACT_VERSION=0x130000 -DCOBJMACROS
-check_type "windows.h windows.graphics.directx.direct3d11.interop.h" IDirect3DDxgiInterfaceAccess -D_WIN32_WINNT=0x0A00 -DWINDOWS_FOUNDATION_UNIVERSALAPICONTRACT_VERSION=0x130000 -DCOBJMACROS
+platform_check_type "windows.h dxva.h" "DXVA_PicParams_AV1" -DWINAPI_FAMILY=WINAPI_FAMILY_DESKTOP_APP -D_CRT_BUILD_DESKTOP_APP=0
+platform_check_type "windows.h dxva.h" "DXVA_PicParams_HEVC" -DWINAPI_FAMILY=WINAPI_FAMILY_DESKTOP_APP -D_CRT_BUILD_DESKTOP_APP=0
+platform_check_type "windows.h dxva.h" "DXVA_PicParams_VP9" -DWINAPI_FAMILY=WINAPI_FAMILY_DESKTOP_APP -D_CRT_BUILD_DESKTOP_APP=0
+platform_check_type "windows.h dxgi1_2.h" "DXGI_OUTDUPL_FRAME_INFO"
+platform_check_type "windows.h dxgi1_2.h" "IDXGIOutput1"
+platform_check_type "windows.h dxgi1_5.h" "IDXGIOutput5"
+platform_check_type "windows.h d3d11.h" "ID3D11VideoDecoder"
+platform_check_type "windows.h d3d11.h" "ID3D11VideoContext"
+platform_check_type "windows.h d3d12.h" "ID3D12Device"
+platform_check_type "windows.h d3d12video.h" "ID3D12VideoDecoder"
+platform_check_type "windows.h d3d12video.h" "ID3D12VideoEncoder"
+platform_check_type "windows.h d3d12video.h" "ID3D12VideoProcessor"
+platform_check_type "windows.h d3d12video.h" "ID3D12VideoMotionEstimator"
+platform_test_code cc "windows.h d3d12video.h" "D3D12_FEATURE_VIDEO feature = D3D12_FEATURE_VIDEO_ENCODER_CODEC" && \
+platform_test_code cc "windows.h d3d12video.h" "D3D12_FEATURE_DATA_VIDEO_ENCODER_RESOURCE_REQUIREMENTS req" && enable d3d12_encoder_feature
+platform_test_code cc "windows.h d3d12video.h" "D3D12_VIDEO_ENCODER_CODEC c = D3D12_VIDEO_ENCODER_CODEC_AV1; (void)c;" && enable d3d12va_av1_headers
+platform_test_code cc "windows.h d3d12video.h" "D3D12_FEATURE_DATA_VIDEO_ENCODER_INTRA_REFRESH_MODE check = { 0 };" && enable d3d12_intra_refresh
+platform_test_code cc "windows.h d3d12video.h" "D3D12_VIDEO_ENCODER_MOTION_ESTIMATION_PRECISION_MODE m = D3D12_VIDEO_ENCODER_MOTION_ESTIMATION_PRECISION_MODE_EIGHTH_PIXEL; (void)m;" && enable d3d12va_me_precision_eighth_pixel
+platform_test_code cc "windows.h d3d12video.h" "D3D12_FEATURE_DATA_VIDEO_MOTION_ESTIMATOR check = { 0 };" && enable d3d12_motion_estimator
+platform_check_type "windows.h" "DPI_AWARENESS_CONTEXT" -D_WIN32_WINNT=0x0A00
+platform_check_type "windows.h security.h schnlsp.h" SecPkgContext_KeyingMaterialInfo -DSECURITY_WIN32
+platform_check_type "d3d9.h dxva2api.h" DXVA2_ConfigPictureDecode -D_WIN32_WINNT=0x0602
+platform_check_func_headers mfapi.h MFCreateAlignedMemoryBuffer -lmfplat
+platform_check_type "windows.h windows.graphics.capture.h" __x_ABI_CWindows_CGraphics_CCapture_CIGraphicsCaptureSession3 -D_WIN32_WINNT=0x0A00 -DWINDOWS_FOUNDATION_UNIVERSALAPICONTRACT_VERSION=0x130000 -DCOBJMACROS
+platform_check_type "windows.h windows.graphics.capture.h" __x_ABI_CWindows_CGraphics_CCapture_CIGraphicsCaptureSession5 -D_WIN32_WINNT=0x0A00 -DWINDOWS_FOUNDATION_UNIVERSALAPICONTRACT_VERSION=0x130000 -DCOBJMACROS
+platform_check_type "windows.h windows.graphics.capture.interop.h" IGraphicsCaptureItemInterop -D_WIN32_WINNT=0x0A00 -DWINDOWS_FOUNDATION_UNIVERSALAPICONTRACT_VERSION=0x130000 -DCOBJMACROS
+platform_check_type "windows.h windows.graphics.directx.direct3d11.interop.h" IDirect3DDxgiInterfaceAccess -D_WIN32_WINNT=0x0A00 -DWINDOWS_FOUNDATION_UNIVERSALAPICONTRACT_VERSION=0x130000 -DCOBJMACROS
 
-check_type "vdpau/vdpau.h" "VdpPictureInfoHEVC"
-check_type "vdpau/vdpau.h" "VdpPictureInfoVP9"
-check_type "vdpau/vdpau.h" "VdpPictureInfoAV1"
+platform_check_type "vdpau/vdpau.h" "VdpPictureInfoHEVC"
+platform_check_type "vdpau/vdpau.h" "VdpPictureInfoVP9"
+platform_check_type "vdpau/vdpau.h" "VdpPictureInfoAV1"
 
 if [ -z "$nvccflags" ]; then
     nvccflags=$nvccflags_default
@@ -2197,75 +2196,75 @@ if enabled cuda_nvcc; then
     nvccflags="$nvccflags -ptx"
 else
     nvccflags="$nvccflags -S -nocudalib -nocudainc --cuda-device-only -Wno-c++11-narrowing -include ${source_link}/compat/cuda/cuda_runtime.h"
-    check_nvcc cuda_llvm
+    platform_check_nvcc cuda_llvm
 fi
 
 if ! disabled ffnvcodec; then
     ffnv_hdr_list="ffnvcodec/nvEncodeAPI.h ffnvcodec/dynlink_cuda.h ffnvcodec/dynlink_cuviddec.h ffnvcodec/dynlink_nvcuvid.h"
-    check_pkg_config ffnvcodec "ffnvcodec >= 12.1.14.0" "$ffnv_hdr_list" "" || \
-      check_pkg_config ffnvcodec "ffnvcodec >= 12.0.16.1 ffnvcodec < 12.1" "$ffnv_hdr_list" "" || \
-      check_pkg_config ffnvcodec "ffnvcodec >= 11.1.5.3 ffnvcodec < 12.0" "$ffnv_hdr_list" "" || \
-      check_pkg_config ffnvcodec "ffnvcodec >= 11.0.10.3 ffnvcodec < 11.1" "$ffnv_hdr_list" "" || \
-      check_pkg_config ffnvcodec "ffnvcodec >= 8.1.24.15 ffnvcodec < 8.2" "$ffnv_hdr_list" ""
+    platform_check_pkg_config ffnvcodec "ffnvcodec >= 12.1.14.0" "$ffnv_hdr_list" "" || \
+      platform_check_pkg_config ffnvcodec "ffnvcodec >= 12.0.16.1 ffnvcodec < 12.1" "$ffnv_hdr_list" "" || \
+      platform_check_pkg_config ffnvcodec "ffnvcodec >= 11.1.5.3 ffnvcodec < 12.0" "$ffnv_hdr_list" "" || \
+      platform_check_pkg_config ffnvcodec "ffnvcodec >= 11.0.10.3 ffnvcodec < 11.1" "$ffnv_hdr_list" "" || \
+      platform_check_pkg_config ffnvcodec "ffnvcodec >= 8.1.24.15 ffnvcodec < 8.2" "$ffnv_hdr_list" ""
 fi
 
 if enabled_all libglslang libshaderc; then
     die "ERROR: libshaderc and libglslang are mutually exclusive, if in doubt, disable libglslang"
 fi
 
-check_cpp_condition winrt windows.h "!WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)"
+platform_check_cpp_condition winrt windows.h "!WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)"
 
 if ! disabled w32threads && ! enabled pthreads; then
-    check_func_headers "windows.h process.h" _beginthreadex &&
-        check_type "windows.h" CONDITION_VARIABLE &&
-        check_type "windows.h" INIT_ONCE &&
+    platform_check_func_headers "windows.h process.h" _beginthreadex &&
+        platform_check_type "windows.h" CONDITION_VARIABLE &&
+        platform_check_type "windows.h" INIT_ONCE &&
         enable w32threads || disable w32threads
     if ! enabled w32threads && enabled winrt; then
-        check_func_headers "windows.h" CreateThread &&
+        platform_check_func_headers "windows.h" CreateThread &&
             enable w32threads || disable w32threads
     fi
 fi
 
 # check for some common methods of building with pthread support
-# do this before the optional library checks as some of them require pthreads
+# do this before the optional library checks as some of them platform_require pthreads
 if ! disabled pthreads && ! enabled w32threads && ! enabled os2threads; then
     enable pthreads
-    # if check_lib pthreads pthread.h pthread_join   -pthread &&
-    #    check_lib pthreads pthread.h pthread_create -pthread; then
+    # if platform_check_lib pthreads pthread.h pthread_join   -pthread &&
+    #    platform_check_lib pthreads pthread.h pthread_create -pthread; then
     #     add_allcflags -pthread
-    # elif check_lib pthreads pthread.h pthread_join   -pthreads &&
-    #      check_lib pthreads pthread.h pthread_create -pthreads; then
+    # elif platform_check_lib pthreads pthread.h pthread_join   -pthreads &&
+    #      platform_check_lib pthreads pthread.h pthread_create -pthreads; then
     #     add_allcflags -pthreads
-    # elif check_lib pthreads pthread.h pthread_join   -ldl -pthread &&
-    #      check_lib pthreads pthread.h pthread_create -ldl -pthread; then
+    # elif platform_check_lib pthreads pthread.h pthread_join   -ldl -pthread &&
+    #      platform_check_lib pthreads pthread.h pthread_create -ldl -pthread; then
     #     add_allcflags -ldl -pthread
-    # elif check_lib pthreads pthread.h pthread_join   -lpthreadGC2 &&
-    #      check_lib pthreads pthread.h pthread_create -lpthreadGC2; then
+    # elif platform_check_lib pthreads pthread.h pthread_join   -lpthreadGC2 &&
+    #      platform_check_lib pthreads pthread.h pthread_create -lpthreadGC2; then
     #     :
-    # elif check_lib pthreads pthread.h pthread_join   -lpthread &&
-    #      check_lib pthreads pthread.h pthread_create -lpthread; then
+    # elif platform_check_lib pthreads pthread.h pthread_join   -lpthread &&
+    #      platform_check_lib pthreads pthread.h pthread_create -lpthread; then
     #     :
-    # elif check_func pthread_join && check_func pthread_create; then
+    # elif platform_check_func pthread_join && platform_check_func pthread_create; then
     #     enable pthreads
     # fi
-    # check_cc pthreads "pthread.h" "static pthread_mutex_t atomic_lock = PTHREAD_MUTEX_INITIALIZER"
+    # platform_check_cc pthreads "pthread.h" "static pthread_mutex_t atomic_lock = PTHREAD_MUTEX_INITIALIZER"
 
     # if enabled pthreads; then
-    #     check_builtin sem_timedwait semaphore.h "sem_t *s; sem_init(s,0,0); sem_timedwait(s,0); sem_destroy(s)" $pthreads_extralibs
-    #     check_func pthread_cancel $pthreads_extralibs
+    #     platform_check_builtin sem_timedwait semaphore.h "sem_t *s; sem_init(s,0,0); sem_timedwait(s,0); sem_destroy(s)" $pthreads_extralibs
+    #     platform_check_func pthread_cancel $pthreads_extralibs
     #     hdrs=pthread.h
     #     if enabled pthread_np_h; then
     #         hdrs="$hdrs pthread_np.h"
     #     fi
-    #     check_lib pthread_set_name_np "$hdrs" pthread_set_name_np -lpthread
-    #     check_lib pthread_setname_np "$hdrs" pthread_setname_np -lpthread
+    #     platform_check_lib pthread_set_name_np "$hdrs" pthread_set_name_np -lpthread
+    #     platform_check_lib pthread_setname_np "$hdrs" pthread_setname_np -lpthread
     # fi
 fi
 
-# enabled  zlib && { check_pkg_config zlib zlib "zlib.h" zlibVersion ||
-#                    check_lib zlib   zlib.h      zlibVersion    -lz; }
-enabled bzlib && check_lib bzlib bzlib.h BZ2_bzlibVersion    -lbz2
-enabled  lzma && check_lib lzma   lzma.h lzma_version_number -llzma
+# enabled  zlib && { platform_check_pkg_config zlib zlib "zlib.h" zlibVersion ||
+#                    platform_check_lib zlib   zlib.h      zlibVersion    -lz; }
+enabled bzlib && platform_check_lib bzlib bzlib.h BZ2_bzlibVersion    -lbz2
+enabled  lzma && platform_check_lib lzma   lzma.h lzma_version_number -llzma
 
 enabled zlib && enable zlib_gzip
 
@@ -2276,9 +2275,9 @@ enabled zlib_gzip && enabled gzip || disable shader_compression
 enabled zlib_gzip && enabled gzip || disable resource_compression
 
 # On some systems dynamic loading requires no extra linker flags
-check_lib libdl dlfcn.h "dlopen dlsym" || check_lib libdl dlfcn.h "dlopen dlsym" -ldl
+platform_check_lib libdl dlfcn.h "dlopen dlsym" || platform_check_lib libdl dlfcn.h "dlopen dlsym" -ldl
 
-check_lib libm math.h sin -lm
+platform_check_lib libm math.h sin -lm
 
 atan2f_args=2
 copysign_args=2
@@ -2287,319 +2286,319 @@ ldexpf_args=2
 powf_args=2
 
 for func in $MATH_FUNCS; do
-    eval check_mathfunc $func \${${func}_args:-1} $libm_extralibs
+    eval platform_check_mathfunc $func \${${func}_args:-1} $libm_extralibs
 done
 
 # these are off by default, so fail if requested and not available
-enabled avisynth          && { require_headers "avisynth/avisynth_c.h avisynth/avs/version.h" &&
-                               { test_cpp_condition avisynth/avs/version.h "AVS_MAJOR_VER >= 3 && AVS_MINOR_VER >= 7 && AVS_BUGFIX_VER >= 3 || AVS_MAJOR_VER >= 3 && AVS_MINOR_VER > 7 || AVS_MAJOR_VER > 3" ||
+enabled avisynth          && { platform_require_headers "avisynth/avisynth_c.h avisynth/avs/version.h" &&
+                               { platform_test_cpp_condition avisynth/avs/version.h "AVS_MAJOR_VER >= 3 && AVS_MINOR_VER >= 7 && AVS_BUGFIX_VER >= 3 || AVS_MAJOR_VER >= 3 && AVS_MINOR_VER > 7 || AVS_MAJOR_VER > 3" ||
                                  die "ERROR: AviSynth+ header version must be >= 3.7.3"; } }
-enabled cairo             && require_pkg_config cairo cairo "cairo.h" cairo_create
-enabled cuda_nvcc         && { check_nvcc cuda_nvcc || die "ERROR: failed checking for nvcc."; }
-enabled chromaprint       && { check_pkg_config chromaprint libchromaprint "chromaprint.h" chromaprint_get_version ||
-                               require chromaprint chromaprint.h chromaprint_get_version -lchromaprint; }
-enabled decklink          && { require_headers DeckLinkAPI.h &&
-                               { test_cpp_condition DeckLinkAPIVersion.h "BLACKMAGIC_DECKLINK_API_VERSION >= 0x0a0b0000" || die "ERROR: Decklink API version must be >= 10.11"; } }
-enabled frei0r            && require_headers "frei0r.h"
-enabled gmp               && require gmp gmp.h mpz_export -lgmp
-enabled gnutls            && require_pkg_config gnutls gnutls gnutls/gnutls.h gnutls_global_init
-enabled jni               && { [ $target_os = "android" ] && check_headers jni.h && enabled pthreads || die "ERROR: jni not found"; }
-enabled ladspa            && require_headers "ladspa.h dlfcn.h"
-enabled lcms2             && require_pkg_config lcms2 "lcms2 >= 2.13" lcms2.h cmsCreateContext
-enabled libaom            && require_pkg_config libaom "aom >= 2.0.0" aom/aom_codec.h aom_codec_version
-enabled liboapv           && require_pkg_config liboapv "oapv >= 0.2.0.0" "oapv/oapv.h" oapve_encode
-enabled libaribb24        && { check_pkg_config libaribb24 "aribb24 > 1.0.3" "aribb24/aribb24.h" arib_instance_new ||
-                               { enabled gpl && require_pkg_config libaribb24 aribb24 "aribb24/aribb24.h" arib_instance_new; } ||
+enabled cairo             && platform_require_pkg_config cairo cairo "cairo.h" cairo_create
+enabled cuda_nvcc         && { platform_check_nvcc cuda_nvcc || die "ERROR: failed checking for nvcc."; }
+enabled chromaprint       && { platform_check_pkg_config chromaprint libchromaprint "chromaprint.h" chromaprint_get_version ||
+                               platform_require chromaprint chromaprint.h chromaprint_get_version -lchromaprint; }
+enabled decklink          && { platform_require_headers DeckLinkAPI.h &&
+                               { platform_test_cpp_condition DeckLinkAPIVersion.h "BLACKMAGIC_DECKLINK_API_VERSION >= 0x0a0b0000" || die "ERROR: Decklink API version must be >= 10.11"; } }
+enabled frei0r            && platform_require_headers "frei0r.h"
+enabled gmp               && platform_require gmp gmp.h mpz_export -lgmp
+enabled gnutls            && platform_require_pkg_config gnutls gnutls gnutls/gnutls.h gnutls_global_init
+enabled jni               && { [ $target_os = "android" ] && platform_check_headers jni.h && enabled pthreads || die "ERROR: jni not found"; }
+enabled ladspa            && platform_require_headers "ladspa.h dlfcn.h"
+enabled lcms2             && platform_require_pkg_config lcms2 "lcms2 >= 2.13" lcms2.h cmsCreateContext
+enabled libaom            && platform_require_pkg_config libaom "aom >= 2.0.0" aom/aom_codec.h aom_codec_version
+enabled liboapv           && platform_require_pkg_config liboapv "oapv >= 0.2.0.0" "oapv/oapv.h" oapve_encode
+enabled libaribb24        && { platform_check_pkg_config libaribb24 "aribb24 > 1.0.3" "aribb24/aribb24.h" arib_instance_new ||
+                               { enabled gpl && platform_require_pkg_config libaribb24 aribb24 "aribb24/aribb24.h" arib_instance_new; } ||
                                die "ERROR: libaribb24 requires version higher than 1.0.3 or --enable-gpl."; }
-enabled libaribcaption    && require_pkg_config libaribcaption "libaribcaption >= 1.1.1" "aribcaption/aribcaption.h" aribcc_context_alloc
-enabled lv2               && require_pkg_config lv2 lilv-0 "lilv/lilv.h" lilv_world_new
-enabled libiec61883       && require libiec61883 libiec61883/iec61883.h iec61883_cmp_connect -lraw1394 -lavc1394 -lrom1394 -liec61883
-enabled libass            && require_pkg_config libass "libass >= 0.11.0" ass/ass.h ass_library_init
-enabled libbluray         && require_pkg_config libbluray libbluray libbluray/bluray.h bd_open
-enabled libbs2b           && require_pkg_config libbs2b libbs2b bs2b.h bs2b_open
-enabled libcelt           && require libcelt celt/celt.h celt_decode -lcelt0 &&
-                             { check_lib libcelt celt/celt.h celt_decoder_create_custom -lcelt0 ||
+enabled libaribcaption    && platform_require_pkg_config libaribcaption "libaribcaption >= 1.1.1" "aribcaption/aribcaption.h" aribcc_context_alloc
+enabled lv2               && platform_require_pkg_config lv2 lilv-0 "lilv/lilv.h" lilv_world_new
+enabled libiec61883       && platform_require libiec61883 libiec61883/iec61883.h iec61883_cmp_connect -lraw1394 -lavc1394 -lrom1394 -liec61883
+enabled libass            && platform_require_pkg_config libass "libass >= 0.11.0" ass/ass.h ass_library_init
+enabled libbluray         && platform_require_pkg_config libbluray libbluray libbluray/bluray.h bd_open
+enabled libbs2b           && platform_require_pkg_config libbs2b libbs2b bs2b.h bs2b_open
+enabled libcelt           && platform_require libcelt celt/celt.h celt_decode -lcelt0 &&
+                             { platform_check_lib libcelt celt/celt.h celt_decoder_create_custom -lcelt0 ||
                                die "ERROR: libcelt must be installed and version must be >= 0.11.0."; }
-enabled libcaca           && require_pkg_config libcaca caca caca.h caca_create_canvas
-enabled libcodec2         && require libcodec2 codec2/codec2.h codec2_create -lcodec2
-enabled libdav1d          && require_pkg_config libdav1d "dav1d >= 1.0.0" "dav1d/dav1d.h" dav1d_version
-enabled libdavs2          && require_pkg_config libdavs2 "davs2 >= 1.6.0" davs2.h davs2_decoder_open
-enabled libdc1394         && require_pkg_config libdc1394 libdc1394-2 dc1394/dc1394.h dc1394_new
-enabled libdrm            && check_pkg_config libdrm libdrm xf86drm.h drmGetVersion
-enabled libdvdnav         && require_pkg_config libdvdnav "dvdnav >= 6.1.0" dvdnav/dvdnav.h dvdnav_open2
-enabled libdvdread        && require_pkg_config libdvdread "dvdread >= 6.1.1" dvdread/dvd_reader.h DVDOpen2
-enabled libfdk_aac        && { check_pkg_config libfdk_aac fdk-aac "fdk-aac/aacenc_lib.h" aacEncOpen ||
-                               { require libfdk_aac fdk-aac/aacenc_lib.h aacEncOpen -lfdk-aac &&
+enabled libcaca           && platform_require_pkg_config libcaca caca caca.h caca_create_canvas
+enabled libcodec2         && platform_require libcodec2 codec2/codec2.h codec2_create -lcodec2
+enabled libdav1d          && platform_require_pkg_config libdav1d "dav1d >= 1.0.0" "dav1d/dav1d.h" dav1d_version
+enabled libdavs2          && platform_require_pkg_config libdavs2 "davs2 >= 1.6.0" davs2.h davs2_decoder_open
+enabled libdc1394         && platform_require_pkg_config libdc1394 libdc1394-2 dc1394/dc1394.h dc1394_new
+enabled libdrm            && platform_check_pkg_config libdrm libdrm xf86drm.h drmGetVersion
+enabled libdvdnav         && platform_require_pkg_config libdvdnav "dvdnav >= 6.1.0" dvdnav/dvdnav.h dvdnav_open2
+enabled libdvdread        && platform_require_pkg_config libdvdread "dvdread >= 6.1.1" dvdread/dvd_reader.h DVDOpen2
+enabled libfdk_aac        && { platform_check_pkg_config libfdk_aac fdk-aac "fdk-aac/aacenc_lib.h" aacEncOpen ||
+                               { platform_require libfdk_aac fdk-aac/aacenc_lib.h aacEncOpen -lfdk-aac &&
                                  warn "using libfdk without pkg-config"; } }
 flite_extralibs="-lflite_cmu_time_awb -lflite_cmu_us_awb -lflite_cmu_us_kal -lflite_cmu_us_kal16 -lflite_cmu_us_rms -lflite_cmu_us_slt -lflite_usenglish -lflite_cmulex -lflite"
-enabled libflite          && require libflite "flite/flite.h" flite_init $flite_extralibs
+enabled libflite          && platform_require libflite "flite/flite.h" flite_init $flite_extralibs
 enabled fontconfig        && enable libfontconfig
-enabled libfontconfig     && require_pkg_config libfontconfig fontconfig "fontconfig/fontconfig.h" FcInit
-enabled libfreetype       && require_pkg_config libfreetype freetype2 "ft2build.h FT_FREETYPE_H" FT_Init_FreeType
-enabled libfribidi        && require_pkg_config libfribidi fribidi fribidi.h fribidi_version_info
-enabled libharfbuzz       && require_pkg_config libharfbuzz harfbuzz hb.h hb_buffer_create
+enabled libfontconfig     && platform_require_pkg_config libfontconfig fontconfig "fontconfig/fontconfig.h" FcInit
+enabled libfreetype       && platform_require_pkg_config libfreetype freetype2 "ft2build.h FT_FREETYPE_H" FT_Init_FreeType
+enabled libfribidi        && platform_require_pkg_config libfribidi fribidi fribidi.h fribidi_version_info
+enabled libharfbuzz       && platform_require_pkg_config libharfbuzz harfbuzz hb.h hb_buffer_create
 if enabled libglslang; then
     spvremap="-lSPVRemapper"
-    require_headers "glslang/build_info.h" && { test_cpp_condition glslang/build_info.h "GLSLANG_VERSION_MAJOR >= 16" && spvremap="" ; }
-    check_lib spirv_library glslang/Include/glslang_c_interface.h glslang_initialize_process \
+    platform_require_headers "glslang/build_info.h" && { platform_test_cpp_condition glslang/build_info.h "GLSLANG_VERSION_MAJOR >= 16" && spvremap="" ; }
+    platform_check_lib spirv_library glslang/Include/glslang_c_interface.h glslang_initialize_process \
                             -lglslang -lMachineIndependent -lGenericCodeGen \
                             ${spvremap} -lSPIRV -lSPIRV-Tools-opt -lSPIRV-Tools -lstdc++ $libm_extralibs $pthreads_extralibs ||
-                        require spirv_library glslang/Include/glslang_c_interface.h glslang_initialize_process \
+                        platform_require spirv_library glslang/Include/glslang_c_interface.h glslang_initialize_process \
                             -lglslang -lMachineIndependent -lOSDependent -lHLSL -lOGLCompiler -lGenericCodeGen \
                             ${spvremap} -lSPIRV -lSPIRV-Tools-opt -lSPIRV-Tools -lstdc++ $libm_extralibs $pthreads_extralibs ;
 fi
-enabled libgme            && { check_pkg_config libgme libgme gme/gme.h gme_new_emu ||
-                               require libgme gme/gme.h gme_new_emu -lgme -lstdc++; }
+enabled libgme            && { platform_check_pkg_config libgme libgme gme/gme.h gme_new_emu ||
+                               platform_require libgme gme/gme.h gme_new_emu -lgme -lstdc++; }
 enabled libgsm            && { for gsm_hdr in "gsm.h" "gsm/gsm.h"; do
-                                   check_lib libgsm "${gsm_hdr}" gsm_create -lgsm && break;
+                                   platform_check_lib libgsm "${gsm_hdr}" gsm_create -lgsm && break;
                                done || die "ERROR: libgsm not found"; }
-enabled libilbc           && require libilbc ilbc.h WebRtcIlbcfix_InitDecode -lilbc $pthreads_extralibs
-enabled libjxl            && require_pkg_config libjxl "libjxl >= 0.7.0" jxl/decode.h JxlDecoderVersion &&
-                             require_pkg_config libjxl_threads "libjxl_threads >= 0.7.0" jxl/thread_parallel_runner.h JxlThreadParallelRunner
-enabled libklvanc         && require libklvanc libklvanc/vanc.h klvanc_context_create -lklvanc
-enabled libkvazaar        && require_pkg_config libkvazaar "kvazaar >= 2.0.0" kvazaar.h kvz_api_get
-enabled liblc3            && require_pkg_config liblc3 "lc3 >= 1.1.0" lc3.h lc3_hr_setup_encoder
-enabled liblensfun        && require_pkg_config liblensfun lensfun lensfun.h lf_db_create
-enabled liblcevc_dec      && require_pkg_config liblcevc_dec "lcevc_dec >= 4.0.0" "LCEVC/lcevc_dec.h" LCEVC_CreateDecoder
+enabled libilbc           && platform_require libilbc ilbc.h WebRtcIlbcfix_InitDecode -lilbc $pthreads_extralibs
+enabled libjxl            && platform_require_pkg_config libjxl "libjxl >= 0.7.0" jxl/decode.h JxlDecoderVersion &&
+                             platform_require_pkg_config libjxl_threads "libjxl_threads >= 0.7.0" jxl/thread_parallel_runner.h JxlThreadParallelRunner
+enabled libklvanc         && platform_require libklvanc libklvanc/vanc.h klvanc_context_create -lklvanc
+enabled libkvazaar        && platform_require_pkg_config libkvazaar "kvazaar >= 2.0.0" kvazaar.h kvz_api_get
+enabled liblc3            && platform_require_pkg_config liblc3 "lc3 >= 1.1.0" lc3.h lc3_hr_setup_encoder
+enabled liblensfun        && platform_require_pkg_config liblensfun lensfun lensfun.h lf_db_create
+enabled liblcevc_dec      && platform_require_pkg_config liblcevc_dec "lcevc_dec >= 4.0.0" "LCEVC/lcevc_dec.h" LCEVC_CreateDecoder
 
 if enabled libmfx && enabled libvpl; then
    die "ERROR: can not use libmfx and libvpl together"
-# While it may appear that require is being used as a pkg-config
+# While it may appear that platform_require is being used as a pkg-config
 # fallback for libmfx, it is actually being used to detect a different
 # installation route altogether.  If libmfx is installed via the Intel
 # Media SDK or Intel Media Server Studio, these don't come with
 # pkg-config support.  Instead, users should make sure that the build
 # can find the libraries and headers through other means.
 elif enabled libmfx; then
-    { check_pkg_config libmfx "libmfx >= 1.28 libmfx < 2.0" "mfxvideo.h" MFXInit ||
+    { platform_check_pkg_config libmfx "libmfx >= 1.28 libmfx < 2.0" "mfxvideo.h" MFXInit ||
 # Some old versions of libmfx have the following settings in libmfx.pc:
 #   includedir=/usr/include
 #   Cflags: -I${includedir}
 # So add -I${includedir}/mfx to CFLAGS
-      { check_pkg_config libmfx "libmfx >= 1.28 libmfx < 2.0" "mfx/mfxvideo.h" MFXInit && add_cppflags -I${libmfx_incdir}/mfx; } ||
-      { require libmfx "mfxvideo.h mfxdefs.h" MFXInit "-llibmfx $advapi32_extralibs" &&
-        { test_cpp_condition mfxdefs.h "MFX_VERSION >= 1028 && MFX_VERSION < 2000" || die "ERROR: libmfx version must be >= 1.28 and < 2.0"; }  &&
+      { platform_check_pkg_config libmfx "libmfx >= 1.28 libmfx < 2.0" "mfx/mfxvideo.h" MFXInit && add_cppflags -I${libmfx_incdir}/mfx; } ||
+      { platform_require libmfx "mfxvideo.h mfxdefs.h" MFXInit "-llibmfx $advapi32_extralibs" &&
+        { platform_test_cpp_condition mfxdefs.h "MFX_VERSION >= 1028 && MFX_VERSION < 2000" || die "ERROR: libmfx version must be >= 1.28 and < 2.0"; }  &&
         warn "using libmfx without pkg-config"; } } &&
     warn "libmfx is deprecated. Please run configure with --enable-libvpl to use libvpl instead."
 elif enabled libvpl; then
-# Consider pkg-config only. The name of libmfx is still passed to check_pkg_config function for --enable-libvpl option
+# Consider pkg-config only. The name of libmfx is still passed to platform_check_pkg_config function for --enable-libvpl option
 # because QSV has dependency on libmfx, we can use the same dependency if using libmfx in this check. The package name
 # is extracted from "vpl >= 2.6"
-    check_pkg_config libmfx "vpl >= 2.6" "mfxvideo.h mfxdispatcher.h" MFXLoad || \
+    platform_check_pkg_config libmfx "vpl >= 2.6" "mfxvideo.h mfxdispatcher.h" MFXLoad || \
             die "ERROR: libvpl >= 2.6 not found"
     add_cppflags -DMFX_DEPRECATED_OFF
-    check_type "vpl/mfxdefs.h vpl/mfxvideo.h" "struct mfxConfigInterface"
+    platform_check_type "vpl/mfxdefs.h vpl/mfxvideo.h" "struct mfxConfigInterface"
 fi
 
 if enabled libmfx; then
-   check_cc MFX_CODEC_VP9 "mfxdefs.h mfxstructures.h" "MFX_CODEC_VP9"
+   platform_check_cc MFX_CODEC_VP9 "mfxdefs.h mfxstructures.h" "MFX_CODEC_VP9"
 fi
 
-enabled libmodplug        && require_pkg_config libmodplug libmodplug libmodplug/modplug.h ModPlug_Load
-enabled libmp3lame        && require "libmp3lame >= 3.98.3" lame/lame.h lame_set_VBR_quality -lmp3lame $libm_extralibs
-enabled libmpeghdec       && require_pkg_config libmpeghdec "mpeghdec >= 3.0.0" mpeghdec/mpeghdecoder.h mpeghdecoder_init
-enabled libmysofa         && { check_pkg_config libmysofa libmysofa mysofa.h mysofa_neighborhood_init_withstepdefine ||
-                               require libmysofa mysofa.h mysofa_neighborhood_init_withstepdefine -lmysofa $zlib_extralibs; }
-enabled libnpp            && { test_cpp_condition "$(cd "$source_path"; pwd)/libavfilter/version_major.h" FF_API_LIBNPP_SUPPORT ||
+enabled libmodplug        && platform_require_pkg_config libmodplug libmodplug libmodplug/modplug.h ModPlug_Load
+enabled libmp3lame        && platform_require "libmp3lame >= 3.98.3" lame/lame.h lame_set_VBR_quality -lmp3lame $libm_extralibs
+enabled libmpeghdec       && platform_require_pkg_config libmpeghdec "mpeghdec >= 3.0.0" mpeghdec/mpeghdecoder.h mpeghdecoder_init
+enabled libmysofa         && { platform_check_pkg_config libmysofa libmysofa mysofa.h mysofa_neighborhood_init_withstepdefine ||
+                               platform_require libmysofa mysofa.h mysofa_neighborhood_init_withstepdefine -lmysofa $zlib_extralibs; }
+enabled libnpp            && { platform_test_cpp_condition "$(cd "$source_path"; pwd)/libavfilter/version_major.h" FF_API_LIBNPP_SUPPORT ||
                                die "ERROR: libnpp support is removed in this version"; } &&
-                             { check_lib libnpp npp.h nppGetLibVersion -lnppig -lnppicc -lnppc -lnppidei -lnppif ||
-                               check_lib libnpp npp.h nppGetLibVersion -lnppi -lnppif -lnppc -lnppidei ||
+                             { platform_check_lib libnpp npp.h nppGetLibVersion -lnppig -lnppicc -lnppc -lnppidei -lnppif ||
+                               platform_check_lib libnpp npp.h nppGetLibVersion -lnppi -lnppif -lnppc -lnppidei ||
                                die "ERROR: libnpp not found"; } &&
-                             { check_func_headers "nppi.h" nppiYCbCr420_8u_P2P3R $libnpp_extralibs ||
+                             { platform_check_func_headers "nppi.h" nppiYCbCr420_8u_P2P3R $libnpp_extralibs ||
                                die "ERROR: libnpp support is deprecated, version 13.0 and up are not supported"; }
-enabled libopencore_amrnb && require libopencore_amrnb opencore-amrnb/interf_dec.h Decoder_Interface_init -lopencore-amrnb
-enabled libopencore_amrwb && require libopencore_amrwb opencore-amrwb/dec_if.h D_IF_init -lopencore-amrwb
-enabled libopencv         && { check_pkg_config libopencv opencv4 opencv2/core/core_c.h cvCreateImageHeader ||
-                               require libopencv opencv2/core/core_c.h cvCreateImageHeader -lopencv_core -lopencv_imgproc; }
+enabled libopencore_amrnb && platform_require libopencore_amrnb opencore-amrnb/interf_dec.h Decoder_Interface_init -lopencore-amrnb
+enabled libopencore_amrwb && platform_require libopencore_amrwb opencore-amrwb/dec_if.h D_IF_init -lopencore-amrwb
+enabled libopencv         && { platform_check_pkg_config libopencv opencv4 opencv2/core/core_c.h cvCreateImageHeader ||
+                               platform_require libopencv opencv2/core/core_c.h cvCreateImageHeader -lopencv_core -lopencv_imgproc; }
 enabled libopencolorio    && add_cxxflags $(pkg-config --cflags OpenColorIO) &&
                                 OCIO_LIBS=$($pkg_config --libs OpenColorIO) &&
-                            require_cpp OpenColorIO OpenColorIO/OpenColorIO.h "namespace OCIO = OCIO_NAMESPACE; OCIO::ConfigRcPtr cfg = OCIO::Config::Create();" $OCIO_LIBS -lstdc++ &&
+                            platform_require_cpp OpenColorIO OpenColorIO/OpenColorIO.h "namespace OCIO = OCIO_NAMESPACE; OCIO::ConfigRcPtr cfg = OCIO::Config::Create();" $OCIO_LIBS -lstdc++ &&
                             append libopencolorio_extralibs "$OCIO_LIBS -lstdc++"
-enabled libopenh264       && require_pkg_config libopenh264 "openh264 >= 1.3.0" wels/codec_api.h WelsGetCodecVersion
-enabled libopenjpeg       && { check_pkg_config libopenjpeg "libopenjp2 >= 2.1.0" openjpeg.h opj_version ||
-                               { require_pkg_config libopenjpeg "libopenjp2 >= 2.1.0" openjpeg.h opj_version -DOPJ_STATIC && add_cppflags -DOPJ_STATIC; } }
-enabled libopenmpt        && require_pkg_config libopenmpt "libopenmpt >= 0.2.6557" libopenmpt/libopenmpt.h openmpt_module_create -lstdc++ && append libopenmpt_extralibs "-lstdc++"
-enabled libopenvino       && { { check_pkg_config libopenvino openvino openvino/c/openvino.h ov_core_create && enable openvino2; } ||
-                                { check_pkg_config libopenvino openvino c_api/ie_c_api.h ie_c_api_version ||
-                                  require libopenvino c_api/ie_c_api.h ie_c_api_version -linference_engine_c_api; } }
+enabled libopenh264       && platform_require_pkg_config libopenh264 "openh264 >= 1.3.0" wels/codec_api.h WelsGetCodecVersion
+enabled libopenjpeg       && { platform_check_pkg_config libopenjpeg "libopenjp2 >= 2.1.0" openjpeg.h opj_version ||
+                               { platform_require_pkg_config libopenjpeg "libopenjp2 >= 2.1.0" openjpeg.h opj_version -DOPJ_STATIC && add_cppflags -DOPJ_STATIC; } }
+enabled libopenmpt        && platform_require_pkg_config libopenmpt "libopenmpt >= 0.2.6557" libopenmpt/libopenmpt.h openmpt_module_create -lstdc++ && append libopenmpt_extralibs "-lstdc++"
+enabled libopenvino       && { { platform_check_pkg_config libopenvino openvino openvino/c/openvino.h ov_core_create && enable openvino2; } ||
+                                { platform_check_pkg_config libopenvino openvino c_api/ie_c_api.h ie_c_api_version ||
+                                  platform_require libopenvino c_api/ie_c_api.h ie_c_api_version -linference_engine_c_api; } }
 enabled libopus           && {
     enabled libopus_decoder && {
-        require_pkg_config libopus opus opus_multistream.h opus_multistream_decoder_create
+        platform_require_pkg_config libopus opus opus_multistream.h opus_multistream_decoder_create
     }
     enabled libopus_encoder && {
-        require_pkg_config libopus opus opus_multistream.h opus_multistream_surround_encoder_create
+        platform_require_pkg_config libopus opus opus_multistream.h opus_multistream_surround_encoder_create
     }
 }
-enabled libplacebo        && require_pkg_config libplacebo "libplacebo >= 5.229.0" libplacebo/vulkan.h pl_vulkan_create
-enabled libpulse          && require_pkg_config libpulse libpulse pulse/pulseaudio.h pa_context_new
-enabled libqrencode       && require_pkg_config libqrencode libqrencode qrencode.h QRcode_encodeString
-enabled libquirc          && require libquirc quirc.h quirc_decode -lquirc
-enabled librabbitmq       && require_pkg_config librabbitmq "librabbitmq >= 0.7.1" amqp.h amqp_new_connection
-enabled librav1e          && require_pkg_config librav1e "rav1e >= 0.5.0" rav1e.h rav1e_context_new
-enabled librist           && require_pkg_config librist "librist >= 0.2.7" librist/librist.h rist_receiver_create
-enabled librsvg           && require_pkg_config librsvg librsvg-2.0 librsvg-2.0/librsvg/rsvg.h rsvg_handle_new_from_data
-enabled librtmp           && require_pkg_config librtmp librtmp librtmp/rtmp.h RTMP_Socket
-enabled librubberband     && require_pkg_config librubberband "rubberband >= 1.8.1" rubberband/rubberband-c.h rubberband_new -lstdc++ && append librubberband_extralibs "-lstdc++"
-enabled libshaderc        && require_pkg_config spirv_library "shaderc >= 2019.1" shaderc/shaderc.h shaderc_compiler_initialize
-enabled libshine          && require_pkg_config libshine shine shine/layer3.h shine_encode_buffer
-enabled libsmbclient      && { check_pkg_config libsmbclient smbclient libsmbclient.h smbc_init ||
-                               require libsmbclient libsmbclient.h smbc_init -lsmbclient; }
-enabled libsnappy         && require libsnappy snappy-c.h snappy_compress -lsnappy -lstdc++
-enabled libsoxr           && require libsoxr soxr.h soxr_create -lsoxr
-enabled libssh            && require_pkg_config libssh "libssh >= 0.6.0" libssh/sftp.h sftp_init
-enabled libspeex          && require_pkg_config libspeex speex speex/speex.h speex_decoder_init
-enabled libsrt            && require_pkg_config libsrt "srt >= 1.3.0" srt/srt.h srt_socket
-enabled libsvtav1         && require_pkg_config libsvtav1 "SvtAv1Enc >= 0.9.0" EbSvtAv1Enc.h svt_av1_enc_init_handle
-enabled libsvtjpegxs      && require_pkg_config libsvtjpegxs "SvtJpegxs >= 0.10.0" SvtJpegxsEnc.h svt_jpeg_xs_encoder_init
-enabled libtensorflow     && require libtensorflow tensorflow/c/c_api.h TF_Version -ltensorflow
-enabled libtesseract      && require_pkg_config libtesseract tesseract tesseract/capi.h TessBaseAPICreate
-enabled libtheora         && require libtheora theora/theoraenc.h th_info_init -ltheoraenc -ltheoradec -logg
-enabled libtls            && require_pkg_config libtls libtls tls.h tls_configure &&
+enabled libplacebo        && platform_require_pkg_config libplacebo "libplacebo >= 5.229.0" libplacebo/vulkan.h pl_vulkan_create
+enabled libpulse          && platform_require_pkg_config libpulse libpulse pulse/pulseaudio.h pa_context_new
+enabled libqrencode       && platform_require_pkg_config libqrencode libqrencode qrencode.h QRcode_encodeString
+enabled libquirc          && platform_require libquirc quirc.h quirc_decode -lquirc
+enabled librabbitmq       && platform_require_pkg_config librabbitmq "librabbitmq >= 0.7.1" amqp.h amqp_new_connection
+enabled librav1e          && platform_require_pkg_config librav1e "rav1e >= 0.5.0" rav1e.h rav1e_context_new
+enabled librist           && platform_require_pkg_config librist "librist >= 0.2.7" librist/librist.h rist_receiver_create
+enabled librsvg           && platform_require_pkg_config librsvg librsvg-2.0 librsvg-2.0/librsvg/rsvg.h rsvg_handle_new_from_data
+enabled librtmp           && platform_require_pkg_config librtmp librtmp librtmp/rtmp.h RTMP_Socket
+enabled librubberband     && platform_require_pkg_config librubberband "rubberband >= 1.8.1" rubberband/rubberband-c.h rubberband_new -lstdc++ && append librubberband_extralibs "-lstdc++"
+enabled libshaderc        && platform_require_pkg_config spirv_library "shaderc >= 2019.1" shaderc/shaderc.h shaderc_compiler_initialize
+enabled libshine          && platform_require_pkg_config libshine shine shine/layer3.h shine_encode_buffer
+enabled libsmbclient      && { platform_check_pkg_config libsmbclient smbclient libsmbclient.h smbc_init ||
+                               platform_require libsmbclient libsmbclient.h smbc_init -lsmbclient; }
+enabled libsnappy         && platform_require libsnappy snappy-c.h snappy_compress -lsnappy -lstdc++
+enabled libsoxr           && platform_require libsoxr soxr.h soxr_create -lsoxr
+enabled libssh            && platform_require_pkg_config libssh "libssh >= 0.6.0" libssh/sftp.h sftp_init
+enabled libspeex          && platform_require_pkg_config libspeex speex speex/speex.h speex_decoder_init
+enabled libsrt            && platform_require_pkg_config libsrt "srt >= 1.3.0" srt/srt.h srt_socket
+enabled libsvtav1         && platform_require_pkg_config libsvtav1 "SvtAv1Enc >= 0.9.0" EbSvtAv1Enc.h svt_av1_enc_init_handle
+enabled libsvtjpegxs      && platform_require_pkg_config libsvtjpegxs "SvtJpegxs >= 0.10.0" SvtJpegxsEnc.h svt_jpeg_xs_encoder_init
+enabled libtensorflow     && platform_require libtensorflow tensorflow/c/c_api.h TF_Version -ltensorflow
+enabled libtesseract      && platform_require_pkg_config libtesseract tesseract tesseract/capi.h TessBaseAPICreate
+enabled libtheora         && platform_require libtheora theora/theoraenc.h th_info_init -ltheoraenc -ltheoradec -logg
+enabled libtls            && platform_require_pkg_config libtls libtls tls.h tls_configure &&
                              { enabled gpl && ! enabled nonfree && die "ERROR: LibreSSL is incompatible with the gpl"; }
-enabled libtorch          && check_cxxflags -std=c++17 && require_cxx libtorch torch/torch.h "torch::Tensor" -ltorch -lc10 -ltorch_cpu -lstdc++ -lpthread
-enabled libtwolame        && require libtwolame twolame.h twolame_init -ltwolame &&
-                             { check_lib libtwolame twolame.h twolame_encode_buffer_float32_interleaved -ltwolame ||
+enabled libtorch          && platform_check_cxxflags -std=c++17 && platform_require_cxx libtorch torch/torch.h "torch::Tensor" -ltorch -lc10 -ltorch_cpu -lstdc++ -lpthread
+enabled libtwolame        && platform_require libtwolame twolame.h twolame_init -ltwolame &&
+                             { platform_check_lib libtwolame twolame.h twolame_encode_buffer_float32_interleaved -ltwolame ||
                                die "ERROR: libtwolame must be installed and version must be >= 0.3.10"; }
-enabled libuavs3d         && require_pkg_config libuavs3d "uavs3d >= 1.1.41" uavs3d.h uavs3d_decode
-enabled libv4l2           && require_pkg_config libv4l2 libv4l2 libv4l2.h v4l2_ioctl
-enabled libvidstab        && require_pkg_config libvidstab "vidstab >= 0.98" vid.stab/libvidstab.h vsMotionDetectInit
-enabled libvmaf           && require_pkg_config libvmaf "libvmaf >= 2.0.0" libvmaf.h vmaf_init
-enabled libvmaf           && check_pkg_config libvmaf_cuda "libvmaf >= 2.0.0" libvmaf_cuda.h vmaf_cuda_state_init
-enabled libvo_amrwbenc    && require libvo_amrwbenc vo-amrwbenc/enc_if.h E_IF_init -lvo-amrwbenc
-enabled libvorbis         && require_pkg_config libvorbis vorbis vorbis/codec.h vorbis_info_init &&
-                             require_pkg_config libvorbisenc vorbisenc vorbis/vorbisenc.h vorbis_encode_init
+enabled libuavs3d         && platform_require_pkg_config libuavs3d "uavs3d >= 1.1.41" uavs3d.h uavs3d_decode
+enabled libv4l2           && platform_require_pkg_config libv4l2 libv4l2 libv4l2.h v4l2_ioctl
+enabled libvidstab        && platform_require_pkg_config libvidstab "vidstab >= 0.98" vid.stab/libvidstab.h vsMotionDetectInit
+enabled libvmaf           && platform_require_pkg_config libvmaf "libvmaf >= 2.0.0" libvmaf.h vmaf_init
+enabled libvmaf           && platform_check_pkg_config libvmaf_cuda "libvmaf >= 2.0.0" libvmaf_cuda.h vmaf_cuda_state_init
+enabled libvo_amrwbenc    && platform_require libvo_amrwbenc vo-amrwbenc/enc_if.h E_IF_init -lvo-amrwbenc
+enabled libvorbis         && platform_require_pkg_config libvorbis vorbis vorbis/codec.h vorbis_info_init &&
+                             platform_require_pkg_config libvorbisenc vorbisenc vorbis/vorbisenc.h vorbis_encode_init
 
-enabled whisper           && require_pkg_config whisper "whisper >= 1.7.5" whisper.h whisper_init_from_file_with_params
+enabled whisper           && platform_require_pkg_config whisper "whisper >= 1.7.5" whisper.h whisper_init_from_file_with_params
 
 enabled libvpx            && {
     enabled libvpx_vp8_decoder && {
-        check_pkg_config libvpx_vp8_decoder "vpx >= 1.4.0" "vpx/vpx_decoder.h vpx/vp8dx.h" vpx_codec_vp8_dx ||
-            check_lib libvpx_vp8_decoder "vpx/vpx_decoder.h vpx/vp8dx.h" "vpx_codec_vp8_dx VPX_IMG_FMT_HIGHBITDEPTH" "-lvpx $libm_extralibs $pthreads_extralibs"
+        platform_check_pkg_config libvpx_vp8_decoder "vpx >= 1.4.0" "vpx/vpx_decoder.h vpx/vp8dx.h" vpx_codec_vp8_dx ||
+            platform_check_lib libvpx_vp8_decoder "vpx/vpx_decoder.h vpx/vp8dx.h" "vpx_codec_vp8_dx VPX_IMG_FMT_HIGHBITDEPTH" "-lvpx $libm_extralibs $pthreads_extralibs"
     }
     enabled libvpx_vp8_encoder && {
-        check_pkg_config libvpx_vp8_encoder "vpx >= 1.4.0" "vpx/vpx_encoder.h vpx/vp8cx.h" vpx_codec_vp8_cx ||
-            check_lib libvpx_vp8_encoder "vpx/vpx_encoder.h vpx/vp8cx.h" "vpx_codec_vp8_cx VPX_IMG_FMT_HIGHBITDEPTH" "-lvpx $libm_extralibs $pthreads_extralibs"
+        platform_check_pkg_config libvpx_vp8_encoder "vpx >= 1.4.0" "vpx/vpx_encoder.h vpx/vp8cx.h" vpx_codec_vp8_cx ||
+            platform_check_lib libvpx_vp8_encoder "vpx/vpx_encoder.h vpx/vp8cx.h" "vpx_codec_vp8_cx VPX_IMG_FMT_HIGHBITDEPTH" "-lvpx $libm_extralibs $pthreads_extralibs"
     }
     enabled libvpx_vp9_decoder && {
-        check_pkg_config libvpx_vp9_decoder "vpx >= 1.4.0" "vpx/vpx_decoder.h vpx/vp8dx.h" vpx_codec_vp9_dx ||
-            check_lib libvpx_vp9_decoder "vpx/vpx_decoder.h vpx/vp8dx.h" "vpx_codec_vp9_dx VPX_IMG_FMT_HIGHBITDEPTH" "-lvpx $libm_extralibs $pthreads_extralibs"
+        platform_check_pkg_config libvpx_vp9_decoder "vpx >= 1.4.0" "vpx/vpx_decoder.h vpx/vp8dx.h" vpx_codec_vp9_dx ||
+            platform_check_lib libvpx_vp9_decoder "vpx/vpx_decoder.h vpx/vp8dx.h" "vpx_codec_vp9_dx VPX_IMG_FMT_HIGHBITDEPTH" "-lvpx $libm_extralibs $pthreads_extralibs"
     }
     enabled libvpx_vp9_encoder && {
-        check_pkg_config libvpx_vp9_encoder "vpx >= 1.4.0" "vpx/vpx_encoder.h vpx/vp8cx.h" vpx_codec_vp9_cx ||
-            check_lib libvpx_vp9_encoder "vpx/vpx_encoder.h vpx/vp8cx.h" "vpx_codec_vp9_cx VPX_IMG_FMT_HIGHBITDEPTH" "-lvpx $libm_extralibs $pthreads_extralibs"
+        platform_check_pkg_config libvpx_vp9_encoder "vpx >= 1.4.0" "vpx/vpx_encoder.h vpx/vp8cx.h" vpx_codec_vp9_cx ||
+            platform_check_lib libvpx_vp9_encoder "vpx/vpx_encoder.h vpx/vp8cx.h" "vpx_codec_vp9_cx VPX_IMG_FMT_HIGHBITDEPTH" "-lvpx $libm_extralibs $pthreads_extralibs"
     }
     if disabled_all libvpx_vp8_decoder libvpx_vp9_decoder libvpx_vp8_encoder libvpx_vp9_encoder; then
         die "libvpx enabled but no supported decoders found"
     fi
 }
 
-enabled libvvenc          && require_pkg_config libvvenc "libvvenc >= 1.6.1" "vvenc/vvenc.h" vvenc_get_version
+enabled libvvenc          && platform_require_pkg_config libvvenc "libvvenc >= 1.6.1" "vvenc/vvenc.h" vvenc_get_version
 enabled libwebp           && {
-    enabled libwebp_encoder      && require_pkg_config libwebp "libwebp >= 0.2.0" webp/encode.h WebPGetEncoderVersion
-    enabled libwebp_anim_encoder && check_pkg_config libwebp_anim_encoder "libwebpmux >= 0.4.0" webp/mux.h WebPAnimEncoderOptionsInit; }
-enabled libx264           && require_pkg_config libx264 x264 "stdint.h x264.h" x264_encoder_encode &&
-                             require_cpp_condition libx264 x264.h "X264_BUILD >= 155" && {
+    enabled libwebp_encoder      && platform_require_pkg_config libwebp "libwebp >= 0.2.0" webp/encode.h WebPGetEncoderVersion
+    enabled libwebp_anim_encoder && platform_check_pkg_config libwebp_anim_encoder "libwebpmux >= 0.4.0" webp/mux.h WebPAnimEncoderOptionsInit; }
+enabled libx264           && platform_require_pkg_config libx264 x264 "stdint.h x264.h" x264_encoder_encode &&
+                             platform_require_cpp_condition libx264 x264.h "X264_BUILD >= 155" && {
                              [ "$toolchain" != "msvc" ] ||
-                             require_cpp_condition libx264 x264.h "X264_BUILD >= 158"; } &&
-                             check_cpp_condition libx264_hdr10 x264.h "X264_BUILD >= 163" &&
-                             check_cpp_condition libx262 x264.h "X264_MPEG2"
-enabled libx265           && require_pkg_config libx265 x265 x265.h x265_api_get &&
-                             require_cpp_condition libx265 x265.h "X265_BUILD >= 89"
-enabled libxavs           && require libxavs "stdint.h xavs.h" xavs_encoder_encode "-lxavs $pthreads_extralibs $libm_extralibs"
-enabled libxavs2          && require_pkg_config libxavs2 "xavs2 >= 1.3.0" "stdint.h xavs2.h" xavs2_api_get
-enabled libxevd           && require_pkg_config libxevd "xevd >= 0.4.1" "xevd.h" xevd_decode
-enabled libxevdb          && require_pkg_config libxevdb "xevdb >= 0.4.1" "xevd.h" xevd_decode
-enabled libxeve           && require_pkg_config libxeve "xeve >= 0.5.1" "xeve.h" xeve_encode
-enabled libxeveb          && require_pkg_config libxeveb "xeveb >= 0.5.1" "xeve.h" xeve_encode
-enabled libxvid           && require libxvid xvid.h xvid_global -lxvidcore
-enabled libzimg           && require_pkg_config libzimg "zimg >= 2.7.0" zimg.h zimg_get_api_version
-enabled libzmq            && require_pkg_config libzmq "libzmq >= 4.2.1" zmq.h zmq_ctx_new
-enabled libzvbi           && require_pkg_config libzvbi zvbi-0.2 libzvbi.h vbi_decoder_new &&
-                             { test_cpp_condition libzvbi.h "VBI_VERSION_MAJOR > 0 || VBI_VERSION_MINOR > 2 || VBI_VERSION_MINOR == 2 && VBI_VERSION_MICRO >= 28" ||
+                             platform_require_cpp_condition libx264 x264.h "X264_BUILD >= 158"; } &&
+                             platform_check_cpp_condition libx264_hdr10 x264.h "X264_BUILD >= 163" &&
+                             platform_check_cpp_condition libx262 x264.h "X264_MPEG2"
+enabled libx265           && platform_require_pkg_config libx265 x265 x265.h x265_api_get &&
+                             platform_require_cpp_condition libx265 x265.h "X265_BUILD >= 89"
+enabled libxavs           && platform_require libxavs "stdint.h xavs.h" xavs_encoder_encode "-lxavs $pthreads_extralibs $libm_extralibs"
+enabled libxavs2          && platform_require_pkg_config libxavs2 "xavs2 >= 1.3.0" "stdint.h xavs2.h" xavs2_api_get
+enabled libxevd           && platform_require_pkg_config libxevd "xevd >= 0.4.1" "xevd.h" xevd_decode
+enabled libxevdb          && platform_require_pkg_config libxevdb "xevdb >= 0.4.1" "xevd.h" xevd_decode
+enabled libxeve           && platform_require_pkg_config libxeve "xeve >= 0.5.1" "xeve.h" xeve_encode
+enabled libxeveb          && platform_require_pkg_config libxeveb "xeveb >= 0.5.1" "xeve.h" xeve_encode
+enabled libxvid           && platform_require libxvid xvid.h xvid_global -lxvidcore
+enabled libzimg           && platform_require_pkg_config libzimg "zimg >= 2.7.0" zimg.h zimg_get_api_version
+enabled libzmq            && platform_require_pkg_config libzmq "libzmq >= 4.2.1" zmq.h zmq_ctx_new
+enabled libzvbi           && platform_require_pkg_config libzvbi zvbi-0.2 libzvbi.h vbi_decoder_new &&
+                             { platform_test_cpp_condition libzvbi.h "VBI_VERSION_MAJOR > 0 || VBI_VERSION_MINOR > 2 || VBI_VERSION_MINOR == 2 && VBI_VERSION_MICRO >= 28" ||
                                enabled gpl || die "ERROR: libzvbi requires version 0.2.28 or --enable-gpl."; }
-enabled libxml2           && require_pkg_config libxml2 libxml-2.0 libxml2/libxml/xmlversion.h xmlCheckVersion
-enabled mbedtls           && { check_pkg_config mbedtls mbedtls mbedtls/x509_crt.h mbedtls_x509_crt_init ||
-                               check_pkg_config mbedtls mbedtls mbedtls/ssl.h mbedtls_ssl_init ||
-                               check_lib mbedtls mbedtls/ssl.h mbedtls_ssl_init -lmbedtls -lmbedx509 -lmbedcrypto ||
+enabled libxml2           && platform_require_pkg_config libxml2 libxml-2.0 libxml2/libxml/xmlversion.h xmlCheckVersion
+enabled mbedtls           && { platform_check_pkg_config mbedtls mbedtls mbedtls/x509_crt.h mbedtls_x509_crt_init ||
+                               platform_check_pkg_config mbedtls mbedtls mbedtls/ssl.h mbedtls_ssl_init ||
+                               platform_check_lib mbedtls mbedtls/ssl.h mbedtls_ssl_init -lmbedtls -lmbedx509 -lmbedcrypto ||
                                die "ERROR: mbedTLS not found"; }
 enabled mediacodec        && { enabled jni || die "ERROR: mediacodec requires --enable-jni"; } &&
                                add_compat android/binder.o
-enabled mmal              && { check_lib mmal interface/mmal/mmal.h mmal_port_connect -lmmal_core -lmmal_util -lmmal_vc_client -lbcm_host ||
+enabled mmal              && { platform_check_lib mmal interface/mmal/mmal.h mmal_port_connect -lmmal_core -lmmal_util -lmmal_vc_client -lbcm_host ||
                                { ! enabled cross_compile &&
                                  add_cflags -isystem/opt/vc/include/ -isystem/opt/vc/include/interface/vmcs_host/linux -isystem/opt/vc/include/interface/vcos/pthreads -fgnu89-inline &&
                                  add_ldflags -L/opt/vc/lib/ &&
-                                 check_lib mmal interface/mmal/mmal.h mmal_port_connect -lmmal_core -lmmal_util -lmmal_vc_client -lbcm_host; } ||
+                                 platform_check_lib mmal interface/mmal/mmal.h mmal_port_connect -lmmal_core -lmmal_util -lmmal_vc_client -lbcm_host; } ||
                                die "ERROR: mmal not found" &&
-                               check_func_headers interface/mmal/mmal.h "MMAL_PARAMETER_VIDEO_MAX_NUM_CALLBACKS"; }
-enabled ohcodec           && { check_lib ohcodec "multimedia/player_framework/native_avcodec_videodecoder.h multimedia/player_framework/native_avcodec_videoencoder.h" \
+                               platform_check_func_headers interface/mmal/mmal.h "MMAL_PARAMETER_VIDEO_MAX_NUM_CALLBACKS"; }
+enabled ohcodec           && { platform_check_lib ohcodec "multimedia/player_framework/native_avcodec_videodecoder.h multimedia/player_framework/native_avcodec_videoencoder.h" \
                                     "OH_VideoDecoder_CreateByName OH_VideoEncoder_CreateByName" \
                                     -lnative_media_vdec -lnative_media_venc -lnative_media_codecbase -lnative_media_core -lnative_window ||
                                die "ERROR: missing native_media libs"; }
-enabled openal            && { check_pkg_config openal "openal >= 1.1" "AL/al.h" alGetError ||
+enabled openal            && { platform_check_pkg_config openal "openal >= 1.1" "AL/al.h" alGetError ||
                                { for al_extralibs in "${OPENAL_LIBS}" "-lopenal" "-lOpenAL32"; do
-                               check_lib openal 'AL/al.h' alGetError "${al_extralibs}" && break; done } ||
+                               platform_check_lib openal 'AL/al.h' alGetError "${al_extralibs}" && break; done } ||
                                die "ERROR: openal not found"; } &&
-                             { test_cpp_condition "AL/al.h" "defined(AL_VERSION_1_1)" ||
+                             { platform_test_cpp_condition "AL/al.h" "defined(AL_VERSION_1_1)" ||
                                die "ERROR: openal must be installed and version must be 1.1 or compatible"; }
-enabled opencl            && { check_pkg_config opencl OpenCL CL/cl.h clEnqueueNDRangeKernel ||
-                               check_lib opencl OpenCL/cl.h clEnqueueNDRangeKernel "-framework OpenCL" ||
-                               check_lib opencl CL/cl.h clEnqueueNDRangeKernel -lOpenCL ||
+enabled opencl            && { platform_check_pkg_config opencl OpenCL CL/cl.h clEnqueueNDRangeKernel ||
+                               platform_check_lib opencl OpenCL/cl.h clEnqueueNDRangeKernel "-framework OpenCL" ||
+                               platform_check_lib opencl CL/cl.h clEnqueueNDRangeKernel -lOpenCL ||
                                die "ERROR: opencl not found"; } &&
-                             { test_cpp_condition "OpenCL/cl.h" "defined(CL_VERSION_1_2)" ||
-                               test_cpp_condition "CL/cl.h" "defined(CL_VERSION_1_2)" ||
+                             { platform_test_cpp_condition "OpenCL/cl.h" "defined(CL_VERSION_1_2)" ||
+                               platform_test_cpp_condition "CL/cl.h" "defined(CL_VERSION_1_2)" ||
                                die "ERROR: opencl must be installed and version must be 1.2 or compatible"; }
-enabled opengl            && { check_lib opengl GL/glx.h glXGetProcAddress "-lGL" ||
-                               check_lib opengl windows.h wglGetProcAddress "-lopengl32 -lgdi32" ||
-                               check_lib opengl OpenGL/gl3.h glGetError "-framework OpenGL" ||
-                               check_lib opengl ES2/gl.h glGetError "-isysroot=${sysroot} -framework OpenGLES" ||
+enabled opengl            && { platform_check_lib opengl GL/glx.h glXGetProcAddress "-lGL" ||
+                               platform_check_lib opengl windows.h wglGetProcAddress "-lopengl32 -lgdi32" ||
+                               platform_check_lib opengl OpenGL/gl3.h glGetError "-framework OpenGL" ||
+                               platform_check_lib opengl ES2/gl.h glGetError "-isysroot=${sysroot} -framework OpenGLES" ||
                                die "ERROR: opengl not found."
                              }
-enabled omx_rpi           && { test_code cc OMX_Core.h OMX_IndexConfigBrcmVideoRequestIFrame ||
+enabled omx_rpi           && { platform_test_code cc OMX_Core.h OMX_IndexConfigBrcmVideoRequestIFrame ||
                                { ! enabled cross_compile &&
                                  add_cflags -isystem/opt/vc/include/IL &&
-                                 test_code cc OMX_Core.h OMX_IndexConfigBrcmVideoRequestIFrame; } ||
+                                 platform_test_code cc OMX_Core.h OMX_IndexConfigBrcmVideoRequestIFrame; } ||
                                die "ERROR: OpenMAX IL headers from raspberrypi/firmware not found"; } &&
                              enable omx
-enabled omx               && require_headers OMX_Core.h && \
+enabled omx               && platform_require_headers OMX_Core.h && \
     warn "The OpenMAX encoders are deprecated and will be removed in future versions"
 
-enabled openssl           && { { check_pkg_config openssl "openssl >= 3.0.0" openssl/ssl.h DTLS_get_data_mtu &&
+enabled openssl           && { { platform_check_pkg_config openssl "openssl >= 3.0.0" openssl/ssl.h DTLS_get_data_mtu &&
                                  { enabled gplv3 || ! enabled gpl || enabled nonfree || die "ERROR: OpenSSL >=3.0.0 requires --enable-version3"; }; } ||
                                { enabled gpl && ! enabled nonfree && die "ERROR: OpenSSL <3.0.0 is incompatible with the gpl"; } ||
-                               check_pkg_config openssl "openssl >= 1.1.1" openssl/ssl.h DTLS_get_data_mtu ||
-                               check_lib openssl openssl/ssl.h DTLS_get_data_mtu -lssl -lcrypto ||
-                               check_lib openssl openssl/ssl.h DTLS_get_data_mtu -lssl -lcrypto -lws2_32 -lgdi32 ||
+                               platform_check_pkg_config openssl "openssl >= 1.1.1" openssl/ssl.h DTLS_get_data_mtu ||
+                               platform_check_lib openssl openssl/ssl.h DTLS_get_data_mtu -lssl -lcrypto ||
+                               platform_check_lib openssl openssl/ssl.h DTLS_get_data_mtu -lssl -lcrypto -lws2_32 -lgdi32 ||
                                die "ERROR: openssl (>= 1.1.1) not found"; }
-enabled pocketsphinx      && require_pkg_config pocketsphinx pocketsphinx pocketsphinx/pocketsphinx.h ps_init
-enabled rkmpp             && { require_pkg_config rkmpp "rockchip_mpp >= 1.3.8" "rockchip/rk_mpi.h rockchip/mpp_buffer.h" "mpp_create mpp_buffer_sync_begin_f" &&
+enabled pocketsphinx      && platform_require_pkg_config pocketsphinx pocketsphinx pocketsphinx/pocketsphinx.h ps_init
+enabled rkmpp             && { platform_require_pkg_config rkmpp "rockchip_mpp >= 1.3.8" "rockchip/rk_mpi.h rockchip/mpp_buffer.h" "mpp_create mpp_buffer_sync_begin_f" &&
                                { enabled libdrm ||
                                  die "ERROR: rkmpp requires --enable-libdrm"; }
                              }
-enabled vapoursynth       && require_headers "vapoursynth/VSScript4.h vapoursynth/VapourSynth4.h"
+enabled vapoursynth       && platform_require_headers "vapoursynth/VSScript4.h vapoursynth/VapourSynth4.h"
 
 if enabled gcrypt; then
     GCRYPT_CONFIG="${cross_prefix}libgcrypt-config"
     if "${GCRYPT_CONFIG}" --version > /dev/null 2>&1; then
         gcrypt_cflags=$("${GCRYPT_CONFIG}" --cflags)
         gcrypt_extralibs=$("${GCRYPT_CONFIG}" --libs)
-        check_func_headers gcrypt.h gcry_mpi_new $gcrypt_cflags $gcrypt_extralibs ||
+        platform_check_func_headers gcrypt.h gcry_mpi_new $gcrypt_cflags $gcrypt_extralibs ||
             die "ERROR: gcrypt not found"
         add_cflags $gcrypt_cflags
     else
-        require gcrypt gcrypt.h gcry_mpi_new -lgcrypt
+        platform_require gcrypt gcrypt.h gcry_mpi_new -lgcrypt
     fi
 fi
 
 if enabled sdl2; then
     enable sdl2
     # SDL2_CONFIG="${cross_prefix}sdl2-config"
-    # test_pkg_config sdl2 "sdl2 >= 2.0.1 sdl2 < 3.0.0" SDL_events.h SDL_PollEvent
+    # platform_test_pkg_config sdl2 "sdl2 >= 2.0.1 sdl2 < 3.0.0" SDL_events.h SDL_PollEvent
     # if disabled sdl2 && "${SDL2_CONFIG}" --version > /dev/null 2>&1; then
     #     sdl2_cflags=$("${SDL2_CONFIG}" --cflags)
     #     sdl2_extralibs=$("${SDL2_CONFIG}" --libs)
-    #     test_cpp_condition SDL.h "(SDL_MAJOR_VERSION<<16 | SDL_MINOR_VERSION<<8 | SDL_PATCHLEVEL) >= 0x020001" $sdl2_cflags &&
-    #     test_cpp_condition SDL.h "(SDL_MAJOR_VERSION<<16 | SDL_MINOR_VERSION<<8 | SDL_PATCHLEVEL) < 0x030000" $sdl2_cflags &&
-    #     check_func_headers SDL_events.h SDL_PollEvent $sdl2_extralibs $sdl2_cflags &&
+    #     platform_test_cpp_condition SDL.h "(SDL_MAJOR_VERSION<<16 | SDL_MINOR_VERSION<<8 | SDL_PATCHLEVEL) >= 0x020001" $sdl2_cflags &&
+    #     platform_test_cpp_condition SDL.h "(SDL_MAJOR_VERSION<<16 | SDL_MINOR_VERSION<<8 | SDL_PATCHLEVEL) < 0x030000" $sdl2_cflags &&
+    #     platform_check_func_headers SDL_events.h SDL_PollEvent $sdl2_extralibs $sdl2_cflags &&
     #         enable sdl2
     # fi
     # if test $target_os = "mingw32"; then
@@ -2617,22 +2616,22 @@ if enabled decklink; then
 fi
 
 enabled securetransport &&
-    check_func SecIdentityCreate "-framework CoreFoundation -framework Security" &&
-    check_lib securetransport "Security/SecureTransport.h Security/Security.h" "SSLCreateContext" "-framework CoreFoundation -framework Security" ||
+    platform_check_func SecIdentityCreate "-framework CoreFoundation -framework Security" &&
+    platform_check_lib securetransport "Security/SecureTransport.h Security/Security.h" "SSLCreateContext" "-framework CoreFoundation -framework Security" ||
         disable securetransport
 
 enabled securetransport &&
-    check_func SecItemImport "-framework CoreFoundation -framework Security"
+    platform_check_func SecItemImport "-framework CoreFoundation -framework Security"
 
 enabled schannel &&
-    check_func_headers "windows.h security.h" InitializeSecurityContext -DSECURITY_WIN32 -lsecur32 &&
-    check_func_headers "windows.h ncrypt.h" NCryptOpenStorageProvider -DSECURITY_WIN32 -lncrypt &&
-    check_func_headers "windows.h wincrypt.h" CertCreateSelfSignCertificate -DSECURITY_WIN32 -lcrypt32 &&
-    test_cpp_condition winerror.h "defined(SEC_I_CONTEXT_EXPIRED)" &&
+    platform_check_func_headers "windows.h security.h" InitializeSecurityContext -DSECURITY_WIN32 -lsecur32 &&
+    platform_check_func_headers "windows.h ncrypt.h" NCryptOpenStorageProvider -DSECURITY_WIN32 -lncrypt &&
+    platform_check_func_headers "windows.h wincrypt.h" CertCreateSelfSignCertificate -DSECURITY_WIN32 -lcrypt32 &&
+    platform_test_cpp_condition winerror.h "defined(SEC_I_CONTEXT_EXPIRED)" &&
     schannel_extralibs="-lsecur32 -lncrypt -lcrypt32" ||
         disable schannel
 
-enabled schannel && check_cc dtls_protocol "windows.h security.h schnlsp.h" "int i = SECPKG_ATTR_DTLS_MTU;" -DSECURITY_WIN32
+enabled schannel && platform_check_cc dtls_protocol "windows.h security.h schnlsp.h" "int i = SECPKG_ATTR_DTLS_MTU;" -DSECURITY_WIN32
 
 makeinfo --version > /dev/null 2>&1 && enable makeinfo  || disable makeinfo
 enabled makeinfo \
@@ -2644,74 +2643,74 @@ pod2man --help     > /dev/null 2>&1 && enable pod2man   || disable pod2man
 rsync --help 2> /dev/null | grep -q 'contimeout=' && enable rsync_contimeout || disable rsync_contimeout
 xmllint --version  > /dev/null 2>&1 && enable xmllint   || disable xmllint
 
-check_headers linux/fb.h
-check_headers linux/videodev2.h
-test_code cc linux/videodev2.h "struct v4l2_frmsizeenum vfse; vfse.discrete.width = 0;" && enable_sanitized struct_v4l2_frmivalenum_discrete
-test_code cc sys/ioctl.h "int ioctl(int, int, ...)" && enable ioctl_posix
+platform_check_headers linux/fb.h
+platform_check_headers linux/videodev2.h
+platform_test_code cc linux/videodev2.h "struct v4l2_frmsizeenum vfse; vfse.discrete.width = 0;" && enable_sanitized struct_v4l2_frmivalenum_discrete
+platform_test_code cc sys/ioctl.h "int ioctl(int, int, ...)" && enable ioctl_posix
 
 # check V4L2 codecs available in the API
 if enabled v4l2_m2m; then
-    check_cc v4l2_m2m linux/videodev2.h "int i = V4L2_CAP_VIDEO_M2M_MPLANE | V4L2_CAP_VIDEO_M2M | V4L2_BUF_FLAG_LAST;"
-    check_cc vc1_v4l2_m2m linux/videodev2.h "int i = V4L2_PIX_FMT_VC1_ANNEX_G;"
-    check_cc mpeg1_v4l2_m2m linux/videodev2.h "int i = V4L2_PIX_FMT_MPEG1;"
-    check_cc mpeg2_v4l2_m2m linux/videodev2.h "int i = V4L2_PIX_FMT_MPEG2;"
-    check_cc mpeg4_v4l2_m2m linux/videodev2.h "int i = V4L2_PIX_FMT_MPEG4;"
-    check_cc hevc_v4l2_m2m linux/videodev2.h "int i = V4L2_PIX_FMT_HEVC;"
-    check_cc h263_v4l2_m2m linux/videodev2.h "int i = V4L2_PIX_FMT_H263;"
-    check_cc h264_v4l2_m2m linux/videodev2.h "int i = V4L2_PIX_FMT_H264;"
-    check_cc vp8_v4l2_m2m linux/videodev2.h "int i = V4L2_PIX_FMT_VP8;"
-    check_cc vp9_v4l2_m2m linux/videodev2.h "int i = V4L2_PIX_FMT_VP9;"
+    platform_check_cc v4l2_m2m linux/videodev2.h "int i = V4L2_CAP_VIDEO_M2M_MPLANE | V4L2_CAP_VIDEO_M2M | V4L2_BUF_FLAG_LAST;"
+    platform_check_cc vc1_v4l2_m2m linux/videodev2.h "int i = V4L2_PIX_FMT_VC1_ANNEX_G;"
+    platform_check_cc mpeg1_v4l2_m2m linux/videodev2.h "int i = V4L2_PIX_FMT_MPEG1;"
+    platform_check_cc mpeg2_v4l2_m2m linux/videodev2.h "int i = V4L2_PIX_FMT_MPEG2;"
+    platform_check_cc mpeg4_v4l2_m2m linux/videodev2.h "int i = V4L2_PIX_FMT_MPEG4;"
+    platform_check_cc hevc_v4l2_m2m linux/videodev2.h "int i = V4L2_PIX_FMT_HEVC;"
+    platform_check_cc h263_v4l2_m2m linux/videodev2.h "int i = V4L2_PIX_FMT_H263;"
+    platform_check_cc h264_v4l2_m2m linux/videodev2.h "int i = V4L2_PIX_FMT_H264;"
+    platform_check_cc vp8_v4l2_m2m linux/videodev2.h "int i = V4L2_PIX_FMT_VP8;"
+    platform_check_cc vp9_v4l2_m2m linux/videodev2.h "int i = V4L2_PIX_FMT_VP9;"
 fi
 
-check_headers sys/videoio.h
-test_code cc sys/videoio.h "struct v4l2_frmsizeenum vfse; vfse.discrete.width = 0;" && enable_sanitized struct_v4l2_frmivalenum_discrete
+platform_check_headers sys/videoio.h
+platform_test_code cc sys/videoio.h "struct v4l2_frmsizeenum vfse; vfse.discrete.width = 0;" && enable_sanitized struct_v4l2_frmivalenum_discrete
 
-check_lib user32 "windows.h winuser.h" GetShellWindow -luser32
-check_lib vfw32 "windows.h vfw.h" capCreateCaptureWindow -lvfw32
+platform_check_lib user32 "windows.h winuser.h" GetShellWindow -luser32
+platform_check_lib vfw32 "windows.h vfw.h" capCreateCaptureWindow -lvfw32
 # check that WM_CAP_DRIVER_CONNECT is defined to the proper value
 # w32api 3.12 had it defined wrong
-check_cpp_condition vfwcap_defines vfw.h "WM_CAP_DRIVER_CONNECT > WM_USER"
+platform_check_cpp_condition vfwcap_defines vfw.h "WM_CAP_DRIVER_CONNECT > WM_USER"
 
-check_type "dshow.h" IBaseFilter
+platform_check_type "dshow.h" IBaseFilter
 
-if check_struct sys/soundcard.h audio_buf_info bytes; then
+if platform_check_struct sys/soundcard.h audio_buf_info bytes; then
     enable_sanitized sys/soundcard.h
 else
-    test_cc -D__BSD_VISIBLE -D__XSI_VISIBLE <<EOF && add_cppflags -D__BSD_VISIBLE -D__XSI_VISIBLE && enable_sanitized sys/soundcard.h
+    platform_test_cc -D__BSD_VISIBLE -D__XSI_VISIBLE <<EOF && add_cppflags -D__BSD_VISIBLE -D__XSI_VISIBLE && enable_sanitized sys/soundcard.h
     #include <sys/soundcard.h>
     audio_buf_info abc;
 EOF
 fi
 
-enabled alsa && { check_pkg_config alsa alsa "alsa/asoundlib.h" snd_pcm_htimestamp ||
-                  check_lib alsa alsa/asoundlib.h snd_pcm_htimestamp -lasound; }
+enabled alsa && { platform_check_pkg_config alsa alsa "alsa/asoundlib.h" snd_pcm_htimestamp ||
+                  platform_check_lib alsa alsa/asoundlib.h snd_pcm_htimestamp -lasound; }
 
 enabled libjack &&
-    require_pkg_config libjack jack jack/jack.h jack_port_get_latency_range
+    platform_require_pkg_config libjack jack jack/jack.h jack_port_get_latency_range
 
-enabled sndio && check_pkg_config sndio sndio sndio.h sio_open
+enabled sndio && platform_check_pkg_config sndio sndio sndio.h sio_open
 
 if enabled libcdio; then
-    check_pkg_config libcdio libcdio_paranoia "cdio/cdda.h cdio/paranoia.h" cdio_cddap_open ||
-    check_pkg_config libcdio libcdio_paranoia "cdio/paranoia/cdda.h cdio/paranoia/paranoia.h" cdio_cddap_open ||
-    check_lib libcdio "cdio/cdda.h cdio/paranoia.h" cdio_cddap_open -lcdio_paranoia -lcdio_cdda -lcdio ||
-    check_lib libcdio "cdio/paranoia/cdda.h cdio/paranoia/paranoia.h" cdio_cddap_open -lcdio_paranoia -lcdio_cdda -lcdio ||
+    platform_check_pkg_config libcdio libcdio_paranoia "cdio/cdda.h cdio/paranoia.h" cdio_cddap_open ||
+    platform_check_pkg_config libcdio libcdio_paranoia "cdio/paranoia/cdda.h cdio/paranoia/paranoia.h" cdio_cddap_open ||
+    platform_check_lib libcdio "cdio/cdda.h cdio/paranoia.h" cdio_cddap_open -lcdio_paranoia -lcdio_cdda -lcdio ||
+    platform_check_lib libcdio "cdio/paranoia/cdda.h cdio/paranoia/paranoia.h" cdio_cddap_open -lcdio_paranoia -lcdio_cdda -lcdio ||
     die "ERROR: No usable libcdio/cdparanoia found"
 fi
 
-enabled libxcb && check_pkg_config libxcb "xcb >= 1.4" xcb/xcb.h xcb_connect ||
+enabled libxcb && platform_check_pkg_config libxcb "xcb >= 1.4" xcb/xcb.h xcb_connect ||
     disable libxcb_shm libxcb_shape libxcb_xfixes
 
 if enabled libxcb; then
-    enabled libxcb_shm    && check_pkg_config libxcb_shm    xcb-shm    xcb/shm.h    xcb_shm_attach
-    enabled libxcb_shape  && check_pkg_config libxcb_shape  xcb-shape  xcb/shape.h  xcb_shape_get_rectangles
-    enabled libxcb_xfixes && check_pkg_config libxcb_xfixes xcb-xfixes xcb/xfixes.h xcb_xfixes_get_cursor_image
+    enabled libxcb_shm    && platform_check_pkg_config libxcb_shm    xcb-shm    xcb/shm.h    xcb_shm_attach
+    enabled libxcb_shape  && platform_check_pkg_config libxcb_shape  xcb-shape  xcb/shape.h  xcb_shape_get_rectangles
+    enabled libxcb_xfixes && platform_check_pkg_config libxcb_xfixes xcb-xfixes xcb/xfixes.h xcb_xfixes_get_cursor_image
 fi
 
-check_func_headers "windows.h" CreateDIBSection "$gdigrab_indev_extralibs"
+platform_check_func_headers "windows.h" CreateDIBSection "$gdigrab_indev_extralibs"
 
 # check if building for desktop or uwp
-test_cpp <<EOF && enable uwp
+platform_test_cpp <<EOF && enable uwp
 #ifdef WINAPI_FAMILY
 #include <winapifamily.h>
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
@@ -2737,45 +2736,45 @@ if enabled uwp; then
 fi
 
 enabled libdrm &&
-    check_pkg_config libdrm_getfb2 libdrm "xf86drmMode.h" drmModeGetFB2
+    platform_check_pkg_config libdrm_getfb2 libdrm "xf86drmMode.h" drmModeGetFB2
 
 enabled vaapi &&
-    check_pkg_config vaapi "libva >= 0.35.0" "va/va.h" vaInitialize
+    platform_check_pkg_config vaapi "libva >= 0.35.0" "va/va.h" vaInitialize
 
 if enabled vaapi; then
     case $target_os in
         mingw32*|mingw64*|win32|win64)
-            check_pkg_config vaapi_win32 "libva-win32" "va/va_win32.h" vaGetDisplayWin32
+            platform_check_pkg_config vaapi_win32 "libva-win32" "va/va_win32.h" vaGetDisplayWin32
             ;;
         *)
-            check_pkg_config vaapi_drm "libva-drm" "va/va_drm.h" vaGetDisplayDRM
+            platform_check_pkg_config vaapi_drm "libva-drm" "va/va_drm.h" vaGetDisplayDRM
             ;;
     esac
 
     if enabled xlib_x11; then
-        check_pkg_config vaapi_x11 "libva-x11" "va/va_x11.h" vaGetDisplay
+        platform_check_pkg_config vaapi_x11 "libva-x11" "va/va_x11.h" vaGetDisplay
     fi
 
-    check_cpp_condition vaapi_1 "va/va.h" "VA_CHECK_VERSION(1, 0, 0)"
+    platform_check_cpp_condition vaapi_1 "va/va.h" "VA_CHECK_VERSION(1, 0, 0)"
 
-    check_type "va/va.h va/va_dec_hevc.h" "VAPictureParameterBufferHEVC"
-    check_type "va/va.h va/va_dec_vvc.h" "VAPictureParameterBufferVVC"
-    check_struct "va/va.h" "VADecPictureParameterBufferVP9" bit_depth
-    check_struct "va/va.h" "VADecPictureParameterBufferAV1" bit_depth_idx
-    check_type   "va/va.h va/va_vpp.h" "VAProcFilterParameterBufferHDRToneMapping"
-    check_struct "va/va.h va/va_vpp.h" "VAProcPipelineCaps" rotation_flags
-    check_struct "va/va.h va/va_vpp.h" "VAProcPipelineCaps" blend_flags
-    check_type "va/va.h va/va_enc_hevc.h" "VAEncPictureParameterBufferHEVC"
-    check_type "va/va.h va/va_enc_jpeg.h" "VAEncPictureParameterBufferJPEG"
-    check_type "va/va.h va/va_enc_vp8.h"  "VAEncPictureParameterBufferVP8"
-    check_type "va/va.h va/va_enc_vp9.h"  "VAEncPictureParameterBufferVP9"
-    check_type "va/va.h va/va_enc_av1.h"  "VAEncPictureParameterBufferAV1"
+    platform_check_type "va/va.h va/va_dec_hevc.h" "VAPictureParameterBufferHEVC"
+    platform_check_type "va/va.h va/va_dec_vvc.h" "VAPictureParameterBufferVVC"
+    platform_check_struct "va/va.h" "VADecPictureParameterBufferVP9" bit_depth
+    platform_check_struct "va/va.h" "VADecPictureParameterBufferAV1" bit_depth_idx
+    platform_check_type   "va/va.h va/va_vpp.h" "VAProcFilterParameterBufferHDRToneMapping"
+    platform_check_struct "va/va.h va/va_vpp.h" "VAProcPipelineCaps" rotation_flags
+    platform_check_struct "va/va.h va/va_vpp.h" "VAProcPipelineCaps" blend_flags
+    platform_check_type "va/va.h va/va_enc_hevc.h" "VAEncPictureParameterBufferHEVC"
+    platform_check_type "va/va.h va/va_enc_jpeg.h" "VAEncPictureParameterBufferJPEG"
+    platform_check_type "va/va.h va/va_enc_vp8.h"  "VAEncPictureParameterBufferVP8"
+    platform_check_type "va/va.h va/va_enc_vp9.h"  "VAEncPictureParameterBufferVP9"
+    platform_check_type "va/va.h va/va_enc_av1.h"  "VAEncPictureParameterBufferAV1"
 fi
 
 if enabled_all opencl libdrm ; then
-    check_type "CL/cl_intel.h" "clCreateImageFromFdINTEL_fn" &&
+    platform_check_type "CL/cl_intel.h" "clCreateImageFromFdINTEL_fn" &&
         enable opencl_drm_beignet
-    check_func_headers "CL/cl_ext.h" clImportMemoryARM &&
+    platform_check_func_headers "CL/cl_ext.h" clImportMemoryARM &&
         enable opencl_drm_arm
 fi
 
@@ -2783,46 +2782,46 @@ if enabled_all opencl vaapi ; then
     if enabled opencl_drm_beignet ; then
         enable opencl_vaapi_beignet
     else
-        check_type "CL/cl_va_api_media_sharing_intel.h" "clCreateFromVA_APIMediaSurfaceINTEL_fn" &&
+        platform_check_type "CL/cl_va_api_media_sharing_intel.h" "clCreateFromVA_APIMediaSurfaceINTEL_fn" &&
             enable opencl_vaapi_intel_media
     fi
 fi
 
 if enabled_all opencl dxva2 ; then
-    check_type "CL/cl_dx9_media_sharing.h" cl_dx9_surface_info_khr &&
+    platform_check_type "CL/cl_dx9_media_sharing.h" cl_dx9_surface_info_khr &&
         enable opencl_dxva2
 fi
 
 if enabled_all opencl d3d11va ; then
-    check_type "CL/cl_d3d11.h" clGetDeviceIDsFromD3D11KHR_fn &&
+    platform_check_type "CL/cl_d3d11.h" clGetDeviceIDsFromD3D11KHR_fn &&
         enable opencl_d3d11
 fi
 
 if enabled_all opencl videotoolbox ; then
-    check_func_headers OpenCL/cl_gl_ext.h clCreateImageFromIOSurfaceWithPropertiesAPPLE -framework VideoToolbox -framework OpenCL &&
+    platform_check_func_headers OpenCL/cl_gl_ext.h clCreateImageFromIOSurfaceWithPropertiesAPPLE -framework VideoToolbox -framework OpenCL &&
         enable opencl_videotoolbox
 fi
 
 enabled vdpau &&
-    check_cpp_condition vdpau vdpau/vdpau.h "defined VDP_DECODER_PROFILE_MPEG4_PART2_ASP"
+    platform_check_cpp_condition vdpau vdpau/vdpau.h "defined VDP_DECODER_PROFILE_MPEG4_PART2_ASP"
 
 enabled vdpau &&
-    check_lib vdpau_x11 "vdpau/vdpau.h vdpau/vdpau_x11.h" vdp_device_create_x11 -lvdpau -lX11
+    platform_check_lib vdpau_x11 "vdpau/vdpau.h vdpau/vdpau_x11.h" vdp_device_create_x11 -lvdpau -lX11
 
 # Check for the Vulkan headers
 if enabled_all vulkan vulkan_static; then
-    check_pkg_config vulkan "vulkan >= 1.3.277" "vulkan/vulkan.h" "defined VK_VERSION_1_3" ||
-        check_lib vulkan "vulkan/vulkan.h" vkGetInstanceProcAddr -lvulkan
+    platform_check_pkg_config vulkan "vulkan >= 1.3.277" "vulkan/vulkan.h" "defined VK_VERSION_1_3" ||
+        platform_check_lib vulkan "vulkan/vulkan.h" vkGetInstanceProcAddr -lvulkan
 elif enabled vulkan; then
-    check_pkg_config_header_only vulkan "vulkan >= 1.3.277" "vulkan/vulkan.h" "defined VK_VERSION_1_3" ||
-        check_cpp_condition vulkan "vulkan/vulkan.h" "defined(VK_VERSION_1_4) || (defined(VK_VERSION_1_3) && VK_HEADER_VERSION >= 277)" $vulkan_incflags
+    platform_check_pkg_config_header_only vulkan "vulkan >= 1.3.277" "vulkan/vulkan.h" "defined VK_VERSION_1_3" ||
+        platform_check_cpp_condition vulkan "vulkan/vulkan.h" "defined(VK_VERSION_1_4) || (defined(VK_VERSION_1_3) && VK_HEADER_VERSION >= 277)" $vulkan_incflags
 fi
 
 if enabled vulkan; then
-    check_pkg_config_header_only vulkan_1_4 "vulkan >= 1.4.317" "vulkan/vulkan.h" "defined VK_VERSION_1_4" ||
-        check_cpp_condition vulkan_1_4 "vulkan/vulkan.h" "defined(VK_VERSION_1_5) || (defined(VK_VERSION_1_4) && VK_HEADER_VERSION >= 317)" $vulkan_incflags
+    platform_check_pkg_config_header_only vulkan_1_4 "vulkan >= 1.4.317" "vulkan/vulkan.h" "defined VK_VERSION_1_4" ||
+        platform_check_cpp_condition vulkan_1_4 "vulkan/vulkan.h" "defined(VK_VERSION_1_5) || (defined(VK_VERSION_1_4) && VK_HEADER_VERSION >= 317)" $vulkan_incflags
     for program in $glslc glslc glslang glslangValidator; do
-        probe_glslc $program && break
+        platform_probe_glslc $program && break
     done
 else
     disable libglslang libshaderc spirv_library spirv_compiler
@@ -2851,7 +2850,7 @@ fi
 enabled ffnvcodec && enable cuda
 
 enabled nvenc &&
-    test_cc -I$source_path <<EOF || disable nvenc
+    platform_test_cc -I$source_path <<EOF || disable nvenc
 #include <ffnvcodec/nvEncodeAPI.h>
 NV_ENCODE_API_FUNCTION_LIST flist;
 void f(void) { struct { const GUID guid; } s[] = { { NV_ENC_CODEC_H264_GUID } }; }
@@ -2859,76 +2858,76 @@ int main(void) { return 0; }
 EOF
 
 if enabled nvenc; then
-    check_type "ffnvcodec/nvEncodeAPI.h" "NV_ENC_PIC_PARAMS_AV1"
+    platform_check_type "ffnvcodec/nvEncodeAPI.h" "NV_ENC_PIC_PARAMS_AV1"
 fi
 
 if enabled_any nvdec cuvid; then
-    check_type "ffnvcodec/dynlink_cuda.h ffnvcodec/dynlink_cuviddec.h" "CUVIDAV1PICPARAMS"
+    platform_check_type "ffnvcodec/dynlink_cuda.h ffnvcodec/dynlink_cuviddec.h" "CUVIDAV1PICPARAMS"
 fi
 
 enabled amf &&
-    check_cpp_condition amf "AMF/core/Version.h" \
+    platform_check_cpp_condition amf "AMF/core/Version.h" \
         "(AMF_VERSION_MAJOR << 48 | AMF_VERSION_MINOR << 32 | AMF_VERSION_RELEASE << 16 | AMF_VERSION_BUILD_NUM) >= 0x0001000400240000"
 
 # Funny iconv installations are not unusual, so check it after all flags have been set
 if enabled libc_iconv; then
-    check_func_headers iconv.h iconv
+    platform_check_func_headers iconv.h iconv
 elif enabled iconv; then
-    check_func_headers iconv.h iconv || check_lib iconv iconv.h iconv -liconv
+    platform_check_func_headers iconv.h iconv || platform_check_lib iconv iconv.h iconv -liconv
 fi
 
 enabled debug && add_allcflags -g"$debuglevel" && add_asflags -g"$debuglevel"
 
 # add some useful compiler flags if supported
-check_allcflags -Wall
-check_allcflags -Wdisabled-optimization
-check_allcflags -Wpointer-arith
-check_allcflags -Wredundant-decls
-check_allcflags -Wwrite-strings
-check_allcflags -Wtype-limits
-check_allcflags -Wundef
-check_allcflags -Wempty-body
-check_cflags -Wmissing-prototypes
-check_cflags -Wstrict-prototypes
+platform_check_allcflags -Wall
+platform_check_allcflags -Wdisabled-optimization
+platform_check_allcflags -Wpointer-arith
+platform_check_allcflags -Wredundant-decls
+platform_check_allcflags -Wwrite-strings
+platform_check_allcflags -Wtype-limits
+platform_check_allcflags -Wundef
+platform_check_allcflags -Wempty-body
+platform_check_cflags -Wmissing-prototypes
+platform_check_cflags -Wstrict-prototypes
 
 if enabled extra_warnings; then
-    check_allcflags -Wcast-qual
-    check_allcflags -Wextra
-    check_allcflags -Wpedantic
+    platform_check_allcflags -Wcast-qual
+    platform_check_allcflags -Wextra
+    platform_check_allcflags -Wpedantic
 fi
 
-test_cflags -Werror=unused-command-line-argument &&
+platform_test_cflags -Werror=unused-command-line-argument &&
     append unknown_warning_flags "-Werror=unused-command-line-argument"
-test_cflags -Werror=unknown-warning-option &&
+platform_test_cflags -Werror=unknown-warning-option &&
     append unknown_warning_flags "-Werror=unknown-warning-option"
 
-check_disable_warning -Wno-parentheses
-check_disable_warning -Wno-switch
-check_disable_warning -Wno-format-zero-length
-check_disable_warning -Wno-pointer-sign
-check_disable_warning -Wno-unused-const-variable
-check_disable_warning -Wno-bool-operation
-check_disable_warning -Wno-char-subscripts
-check_disable_warning -Wno-implicit-const-int-float-conversion
-check_disable_warning -Wno-microsoft-enum-forward-reference
+platform_check_disable_warning -Wno-parentheses
+platform_check_disable_warning -Wno-switch
+platform_check_disable_warning -Wno-format-zero-length
+platform_check_disable_warning -Wno-pointer-sign
+platform_check_disable_warning -Wno-unused-const-variable
+platform_check_disable_warning -Wno-bool-operation
+platform_check_disable_warning -Wno-char-subscripts
+platform_check_disable_warning -Wno-implicit-const-int-float-conversion
+platform_check_disable_warning -Wno-microsoft-enum-forward-reference
 
-check_disable_warning_headers -Wno-deprecated-declarations
-check_disable_warning_headers -Wno-unused-variable
+platform_check_disable_warning_headers -Wno-deprecated-declarations
+platform_check_disable_warning_headers -Wno-unused-variable
 
-test_cc <<EOF && enable blocks_extension
+platform_test_cc <<EOF && enable blocks_extension
 void (^block)(void);
 EOF
 
 # add some linker flags
-check_ldflags -Wl,-rpath-link=:libswresample:libswscale:libavfilter:libavdevice:libavformat:libavcodec:libavutil
+platform_check_ldflags -Wl,-rpath-link=:libswresample:libswscale:libavfilter:libavdevice:libavformat:libavcodec:libavutil
 enabled rpath && add_ldexeflags -Wl,-rpath,$libdir && add_ldsoflags -Wl,-rpath,$libdir
-test_ldflags -Wl,-Bsymbolic && append SHFLAGS -Wl,-Bsymbolic
+platform_test_ldflags -Wl,-Bsymbolic && append SHFLAGS -Wl,-Bsymbolic
 
 # add some strip flags
-check_stripflags -x
+platform_check_stripflags -x
 
 enabled neon_clobber_test &&
-    check_ldflags -Wl,--wrap,avcodec_open2              \
+    platform_check_ldflags -Wl,--wrap,avcodec_open2              \
                   -Wl,--wrap,avcodec_decode_subtitle2   \
                   -Wl,--wrap,avcodec_encode_subtitle    \
                   -Wl,--wrap,avcodec_send_packet        \
@@ -2939,7 +2938,7 @@ enabled neon_clobber_test &&
     disable neon_clobber_test
 
 enabled xmm_clobber_test &&
-    check_ldflags -Wl,--wrap,avcodec_open2              \
+    platform_check_ldflags -Wl,--wrap,avcodec_open2              \
                   -Wl,--wrap,avcodec_decode_subtitle2   \
                   -Wl,--wrap,avcodec_encode_subtitle    \
                   -Wl,--wrap,avcodec_send_packet        \
@@ -2950,7 +2949,7 @@ enabled xmm_clobber_test &&
                   -Wl,--wrap,sws_scale ||
     disable xmm_clobber_test
 
-check_ld "cc" proper_dce <<EOF
+platform_check_ld "cc" proper_dce <<EOF
 extern const int array[512];
 static inline int func(void) { return array[0]; }
 int main(void) { return 0; }
@@ -2958,14 +2957,14 @@ EOF
 
 if enabled proper_dce; then
     echo "X { local: *; };" > $TMPV
-    if test_ldflags -Wl,${version_script},$TMPV; then
+    if platform_test_ldflags -Wl,${version_script},$TMPV; then
         append SHFLAGS '-Wl,${version_script},\$(SUBDIR)lib\$(NAME).ver'
         quotes='""'
-        test_cc <<EOF && enable symver_asm_label
+        platform_test_cc <<EOF && enable symver_asm_label
 void ff_foo(void) __asm__ ("av_foo@VERSION");
 void ff_foo(void) { ${inline_asm+__asm__($quotes);} }
 EOF
-        test_cc <<EOF && enable symver_gnu_asm
+        platform_test_cc <<EOF && enable symver_gnu_asm
 __asm__(".symver ff_foo,av_foo@VERSION");
 void ff_foo(void) {}
 EOF
@@ -2982,14 +2981,14 @@ if [ -z "$optflags" ]; then
     fi
 fi
 
-check_optflags $optflags
-check_optflags -fno-math-errno
-check_optflags -fno-signed-zeros
+platform_check_optflags $optflags
+platform_check_optflags -fno-math-errno
+platform_check_optflags -fno-signed-zeros
 
 if [ -n "$lto" ]; then
     test "$cc_type" != "$ld_type" && die "LTO requires same compiler and linker"
-    check_cflags  $lto
-    check_ldflags $lto $cpuflags
+    platform_check_cflags  $lto
+    platform_check_ldflags $lto $cpuflags
     disable inline_asm_direct_symbol_refs
     if test "$cc_type" = "clang"; then
         # Clang's LTO fails on Windows, when there are references outside
@@ -3003,15 +3002,15 @@ if [ -n "$lto" ]; then
     fi
 fi
 
-enabled ftrapv && check_cflags -ftrapv
+enabled ftrapv && platform_check_cflags -ftrapv
 
-test_cc -mno-red-zone <<EOF && noredzone_flags="-mno-red-zone"
+platform_test_cc -mno-red-zone <<EOF && noredzone_flags="-mno-red-zone"
 int x;
 EOF
 
 if enabled icc; then
     # Just warnings, no remarks
-    check_allcflags -w1
+    platform_check_allcflags -w1
     # -wd: Disable following warnings
     # 144, 167, 556: -Wno-pointer-sign
     # 188: enumerated type mixed with another type
@@ -3022,10 +3021,10 @@ if enabled icc; then
     # 10156: ignoring option '-W'; no argument required
     # 13200: No EMMS instruction before call to function
     # 13203: No EMMS instruction before return from function
-    check_allcflags -wd144,167,188,556,1292,1419,10006,10148,10156,13200,13203
+    platform_check_allcflags -wd144,167,188,556,1292,1419,10006,10148,10156,13200,13203
     # 11030: Warning unknown option --as-needed
     # 10156: ignoring option '-export'; no argument required
-    check_ldflags -wd10156,11030
+    platform_check_ldflags -wd10156,11030
     # icc 11.0 and 11.1 work with ebp_available, but don't pass the test
     enable ebp_available
     # The test above does not test linking
@@ -3033,7 +3032,7 @@ if enabled icc; then
     if enabled x86_32; then
         icc_version=$($cc -dumpversion)
         test ${icc_version%%.*} -ge 11 &&
-            check_cppflags -falign-stack=maintain-16-byte ||
+            platform_check_cppflags -falign-stack=maintain-16-byte ||
             disable aligned_stack
     fi
 elif enabled gcc; then
@@ -3041,7 +3040,7 @@ elif enabled gcc; then
     major_version=${gcc_version%%[!0-9]*}
     if [ $major_version -lt 13 ]; then
         # Disable tree-vectorize for GCC <13 - it has historically been buggy.
-        check_optflags -fno-tree-vectorize
+        platform_check_optflags -fno-tree-vectorize
     else
         case $arch in
         x86|arm|aarch64)
@@ -3052,18 +3051,18 @@ elif enabled gcc; then
             # Disable tree-vectorize on potentially less tested
             # architectures. Known issues:
             # - https://gcc.gnu.org/PR121064 on Loongarch
-            check_optflags -fno-tree-vectorize
+            platform_check_optflags -fno-tree-vectorize
             ;;
         esac
     fi
-    check_cflags -Werror=implicit-function-declaration
-    check_cflags -Werror=missing-prototypes
-    check_allcflags -Werror=format-security
-    check_allcflags -Werror=return-type
-    check_allcflags -Werror=vla
-    check_allcflags -Wformat
-    check_allcflags -fdiagnostics-color=auto
-    enabled extra_warnings || check_disable_warning -Wno-maybe-uninitialized
+    platform_check_cflags -Werror=implicit-function-declaration
+    platform_check_cflags -Werror=missing-prototypes
+    platform_check_allcflags -Werror=format-security
+    platform_check_allcflags -Werror=return-type
+    platform_check_allcflags -Werror=vla
+    platform_check_allcflags -Wformat
+    platform_check_allcflags -fdiagnostics-color=auto
+    enabled extra_warnings || platform_check_disable_warning -Wno-maybe-uninitialized
     if enabled x86_32; then
         case $target_os in
         *bsd*)
@@ -3071,12 +3070,12 @@ elif enabled gcc; then
             # request GCC to try to maintain 16 byte alignment throughout
             # function calls. Library entry points that might call assembly
             # functions align the stack. (The parameter means 2^4 bytes.)
-            check_allcflags -mpreferred-stack-boundary=4
+            platform_check_allcflags -mpreferred-stack-boundary=4
             ;;
         esac
     fi
 elif enabled llvm_gcc; then
-    check_allcflags -mllvm -stack-alignment=16
+    platform_check_allcflags -mllvm -stack-alignment=16
 elif enabled clang; then
     if enabled x86_32; then
         # Clang doesn't support maintaining alignment without assuming the
@@ -3089,18 +3088,18 @@ elif enabled clang; then
             disable aligned_stack
             ;;
         *)
-            check_allcflags -mllvm -stack-alignment=16
-            check_allcflags -mstack-alignment=16
+            platform_check_allcflags -mllvm -stack-alignment=16
+            platform_check_allcflags -mstack-alignment=16
             ;;
         esac
     else
-        check_allcflags -mllvm -stack-alignment=16
-        check_allcflags -mstack-alignment=16
+        platform_check_allcflags -mllvm -stack-alignment=16
+        platform_check_allcflags -mstack-alignment=16
     fi
-    check_allcflags -Qunused-arguments
-    check_allcflags -Werror=implicit-function-declaration
-    check_allcflags -Werror=missing-prototypes
-    check_allcflags -Werror=return-type
+    platform_check_allcflags -Qunused-arguments
+    platform_check_allcflags -Werror=implicit-function-declaration
+    platform_check_allcflags -Werror=missing-prototypes
+    platform_check_allcflags -Werror=return-type
 elif enabled cparser; then
     add_cflags -Wno-missing-variable-declarations
     add_cflags -Wno-empty-statement
@@ -3125,7 +3124,7 @@ elif enabled_any msvc icl; then
     if enabled icl; then
         # -Qansi-alias is basically -fstrict-aliasing, but does not work
         # (correctly) on icl 13.x.
-        test_cpp_condition "windows.h" "__ICL < 1300 || __ICL >= 1400" &&
+        platform_test_cpp_condition "windows.h" "__ICL < 1300 || __ICL >= 1400" &&
             add_cflags -Qansi-alias
         # Some inline asm is not compilable in debug
         if enabled debug; then
@@ -3134,13 +3133,13 @@ elif enabled_any msvc icl; then
         fi
     fi
     # msvcrt10 x64 incorrectly enables log2, only msvcrt12 (MSVC 2013) onwards actually has log2.
-    check_cpp_condition log2 crtversion.h "_VC_CRT_MAJOR_VERSION >= 12"
+    platform_check_cpp_condition log2 crtversion.h "_VC_CRT_MAJOR_VERSION >= 12"
     # the new SSA optimizer in VS2015 U3 is mis-optimizing some parts of the code
     # Issue has been fixed in MSVC v19.00.24218.
-    test_cpp_condition windows.h "_MSC_FULL_VER >= 190024218" ||
-        check_cflags -d2SSAOptimizer-
+    platform_test_cpp_condition windows.h "_MSC_FULL_VER >= 190024218" ||
+        platform_check_cflags -d2SSAOptimizer-
     # enable utf-8 source processing on VS2015 U2 and newer
-    test_cpp_condition windows.h "_MSC_FULL_VER >= 190023918" &&
+    platform_test_cpp_condition windows.h "_MSC_FULL_VER >= 190023918" &&
         add_cflags -utf-8
 fi
 
@@ -3162,7 +3161,7 @@ esac
 
 case $ld_type in
     clang)
-        check_ldflags -Qunused-arguments
+        platform_check_ldflags -Qunused-arguments
     ;;
 esac
 
@@ -3170,7 +3169,7 @@ if [ "$response_files" != "no" ]; then
     ar_out=${FFTMPDIR}/test$LIBSUF
     respfile="@/dev/null"
     out_arg="$(echo $ar_o | sed "s;\$@;$ar_out;g")"
-    if test_cmd $ar $arflags $out_arg $respfile; then
+    if platform_test_cmd $ar $arflags $out_arg $respfile; then
         response_files="yes"
     elif [ "$response_files" = "auto" ]; then
         response_files="no"
@@ -3202,7 +3201,7 @@ haiku)
     disable posix_memalign
     ;;
 *-dos|freedos|opendos)
-    if test_cpp_condition sys/version.h "defined(__DJGPP__) && __DJGPP__ == 2 && __DJGPP_MINOR__ == 5"; then
+    if platform_test_cpp_condition sys/version.h "defined(__DJGPP__) && __DJGPP__ == 2 && __DJGPP_MINOR__ == 5"; then
         disable memalign
     fi
     ;;
@@ -3242,7 +3241,7 @@ if disabled stdatomic; then
     fi
 fi
 
-check_builtin stdbit "stdbit.h assert.h" \
+platform_check_builtin stdbit "stdbit.h assert.h" \
     'static_assert(__STDC_VERSION_STDBIT_H__ >= 202311L, "Compiler lacks stdbit.h")' || \
     add_cppflags '-I\$(SRC_PATH)/compat/stdbit'
 
