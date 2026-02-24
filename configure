@@ -434,90 +434,90 @@ map 'disable_components $v' $LIBRARY_LIST
 echo "# $0 $FFMPEG_CONFIGURATION" > $logfile
 set >> $logfile
 
-test -n "$valgrind" && toolchain="valgrind-memcheck"
-
-case "$toolchain" in
-    clang-*)
-        add_sanitizers "${toolchain#clang-}"
-        cc_default="clang"
-        cxx_default="clang++"
-    ;;
-    gcc-*)
-        add_sanitizers "${toolchain#gcc-}"
-        cc_default="gcc"
-        cxx_default="g++"
-        # In case of tsan with gcc, PIC has to be enabled
-        if [ "${toolchain#gcc-}" = "tsan" ]; then
-            add_allcflags -fPIC
-            add_ldflags -fPIC
-        fi
-    ;;
-    valgrind-*)
-        target_exec_default="valgrind"
-        case "$toolchain" in
-            valgrind-massif)
-                target_exec_args="--tool=massif --alloc-fn=av_malloc --alloc-fn=av_mallocz --alloc-fn=av_calloc --alloc-fn=av_fast_padded_malloc --alloc-fn=av_fast_malloc --alloc-fn=av_realloc_f --alloc-fn=av_fast_realloc --alloc-fn=av_realloc"
-                ;;
-            valgrind-memcheck)
-                target_exec_args="--error-exitcode=1 --malloc-fill=0x2a --track-origins=yes --leak-check=full --gen-suppressions=all --suppressions=$source_path/tests/fate-valgrind.supp"
-                ;;
-        esac
-    ;;
-    msvc)
-        cl_major_ver=$(cl.exe 2>&1 | sed -n 's/.*Version \([[:digit:]]\{1,\}\)\..*/\1/p')
-        if [ -z "$cl_major_ver" ] || [ $cl_major_ver -ge 18 ]; then
-            cc_default="cl.exe"
-            cxx_default="cl.exe"
-        else
-            die "Unsupported MSVC version (2013 or newer required)"
-        fi
-        ld_default="$source_path/compat/windows/mslink"
-        windres_default="$source_path/compat/windows/mswindres"
-        nm_default="dumpbin.exe -symbols"
-        ar_default="lib.exe"
-        case "${arch:-$arch_default}" in
-        aarch64|arm64)
-            as_default="armasm64.exe"
-            ;;
-        arm*)
-            as_default="armasm.exe"
-            ;;
-        esac
-        target_os_default="win32"
-        # Use a relative path for TMPDIR. This makes sure all the
-        # ffconf temp files are written with a relative path, avoiding
-        # issues with msys/win32 path conversion for MSVC parameters
-        # such as -Fo<file> or -out:<file>.
-        TMPDIR=.
-    ;;
-    icl)
-        cc_default="icl"
-        ld_default="xilink"
-        nm_default="dumpbin -symbols"
-        ar_default="xilib"
-        target_os_default="win32"
-        TMPDIR=.
-    ;;
-    gcov)
-        add_allcflags  -fprofile-arcs -ftest-coverage
-        add_ldflags -fprofile-arcs -ftest-coverage
-    ;;
-    llvm-cov)
-        add_allcflags -fprofile-arcs -ftest-coverage
-        add_ldflags --coverage
-    ;;
-    hardened)
-        add_cppflags -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2
-        add_allcflags -fno-strict-overflow -fstack-protector-all
-        add_ldflags  -Wl,-z,relro -Wl,-z,now
-        add_allcflags -fPIE
-        add_ldexeflags -fPIE -pie
-    ;;
-    ?*)
-        die "Unknown toolchain $toolchain"
-    ;;
-esac
-
+# test -n "$valgrind" && toolchain="valgrind-memcheck"
+#
+# case "$toolchain" in
+#     clang-*)
+#         add_sanitizers "${toolchain#clang-}"
+#         cc_default="clang"
+#         cxx_default="clang++"
+#     ;;
+#     gcc-*)
+#         add_sanitizers "${toolchain#gcc-}"
+#         cc_default="gcc"
+#         cxx_default="g++"
+#         # In case of tsan with gcc, PIC has to be enabled
+#         if [ "${toolchain#gcc-}" = "tsan" ]; then
+#             add_allcflags -fPIC
+#             add_ldflags -fPIC
+#         fi
+#     ;;
+#     valgrind-*)
+#         target_exec_default="valgrind"
+#         case "$toolchain" in
+#             valgrind-massif)
+#                 target_exec_args="--tool=massif --alloc-fn=av_malloc --alloc-fn=av_mallocz --alloc-fn=av_calloc --alloc-fn=av_fast_padded_malloc --alloc-fn=av_fast_malloc --alloc-fn=av_realloc_f --alloc-fn=av_fast_realloc --alloc-fn=av_realloc"
+#                 ;;
+#             valgrind-memcheck)
+#                 target_exec_args="--error-exitcode=1 --malloc-fill=0x2a --track-origins=yes --leak-check=full --gen-suppressions=all --suppressions=$source_path/tests/fate-valgrind.supp"
+#                 ;;
+#         esac
+#     ;;
+#     msvc)
+#         cl_major_ver=$(cl.exe 2>&1 | sed -n 's/.*Version \([[:digit:]]\{1,\}\)\..*/\1/p')
+#         if [ -z "$cl_major_ver" ] || [ $cl_major_ver -ge 18 ]; then
+#             cc_default="cl.exe"
+#             cxx_default="cl.exe"
+#         else
+#             die "Unsupported MSVC version (2013 or newer required)"
+#         fi
+#         ld_default="$source_path/compat/windows/mslink"
+#         windres_default="$source_path/compat/windows/mswindres"
+#         nm_default="dumpbin.exe -symbols"
+#         ar_default="lib.exe"
+#         case "${arch:-$arch_default}" in
+#         aarch64|arm64)
+#             as_default="armasm64.exe"
+#             ;;
+#         arm*)
+#             as_default="armasm.exe"
+#             ;;
+#         esac
+#         target_os_default="win32"
+#         # Use a relative path for TMPDIR. This makes sure all the
+#         # ffconf temp files are written with a relative path, avoiding
+#         # issues with msys/win32 path conversion for MSVC parameters
+#         # such as -Fo<file> or -out:<file>.
+#         TMPDIR=.
+#     ;;
+#     icl)
+#         cc_default="icl"
+#         ld_default="xilink"
+#         nm_default="dumpbin -symbols"
+#         ar_default="xilib"
+#         target_os_default="win32"
+#         TMPDIR=.
+#     ;;
+#     gcov)
+#         add_allcflags  -fprofile-arcs -ftest-coverage
+#         add_ldflags -fprofile-arcs -ftest-coverage
+#     ;;
+#     llvm-cov)
+#         add_allcflags -fprofile-arcs -ftest-coverage
+#         add_ldflags --coverage
+#     ;;
+#     hardened)
+#         add_cppflags -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2
+#         add_allcflags -fno-strict-overflow -fstack-protector-all
+#         add_ldflags  -Wl,-z,relro -Wl,-z,now
+#         add_allcflags -fPIE
+#         add_ldexeflags -fPIE -pie
+#     ;;
+#     ?*)
+#         die "Unknown toolchain $toolchain"
+#     ;;
+# esac
+#
 if test -n "$cross_prefix"; then
     test -n "$arch" && test -n "$target_os" ||
         die "Must specify target arch (--arch) and OS (--target-os) when cross-compiling"
@@ -566,6 +566,9 @@ if enabled cuda_nvcc; then
 fi
 
 set_default arch cc cxx doxygen pkg_config ranlib strip sysinclude \
+arflags="rc"
+ar_o='$@'
+nm_default="nm -g"
     target_exec x86asmexe glslc metalcc metallib
 enabled cross_compile || host_cc_default=$cc
 set_default host_cc
@@ -646,84 +649,82 @@ EOF
     die "Sanity test failed."
 fi
 
-phase 'Checking toolchain'
-platform_probe_cc cc "$cc" "true"
-cflags_filter=$_flags_filter
-cflags_speed=$_cflags_speed
-cflags_size=$_cflags_size
-cflags_noopt=$_cflags_noopt
-add_cflags $_flags $_cflags
-add_cxxflags $_flags $_cxxflags
-cc_ldflags=$_ldflags
-set_ccvars CC
-set_ccvars CXX
-
-platform_probe_cc hostcc "$host_cc"
-host_cflags_filter=$_flags_filter
-host_cflags_speed=$_cflags_speed
-add_host_cflags  $_flags $_cflags
-set_ccvars HOSTCC
-
-test -n "$cc_type" && enable $cc_type ||
-    warn "Unknown C compiler $cc, unable to select optimal CFLAGS"
-
-: ${as_default:=$cc}
-: ${objcc_default:=$cc}
-: ${dep_cc_default:=$cc}
-: ${ld_default:=$cc}
-: ${host_ld_default:=$host_cc}
-set_default ar as objcc dep_cc ld ln_s host_ld windres response_files
-
-platform_probe_cc as "$as"
-asflags_filter=$_flags_filter
-add_asflags $_flags $_cflags
-set_ccvars AS
-
-platform_probe_cc objcc "$objcc"
-objcflags_filter=$_flags_filter
-add_objcflags $_flags $_cflags
-set_ccvars OBJC
-
-platform_probe_cc ld "$ld"
-ldflags_filter=$_flags_filter
-add_ldflags $_flags $_ldflags
-test "$cc_type" != "$ld_type" && add_ldflags $cc_ldflags
-LD_O=${_ld_o-$LD_O}
-LD_LIB=${_ld_lib-$LD_LIB}
-LD_PATH=${_ld_path-$LD_PATH}
-
-platform_probe_cc hostld "$host_ld"
-host_ldflags_filter=$_flags_filter
-add_host_ldflags $_flags $_ldflags
-HOSTLD_O=${_ld_o-$HOSTLD_O}
-
-if [ -z "$CC_DEPFLAGS" ] && [ "$dep_cc" != "$cc" ]; then
-    platform_probe_cc depcc "$dep_cc"
-    CCDEP=${_DEPCMD:-$DEPCMD}
-    CXXDEP=${CCDEP}
-    CCDEP_FLAGS=${_DEPFLAGS:=$DEPFLAGS}
-    CXXDEP_FLAGS=${CCDEP_FLAGS}
-    DEPCCFLAGS=$_flags $_cflags
-    DEPCXXFLAGS=$_flags $_cxxflags
-fi
-
-if VSLANG=1033 $ar 2>&1 | grep -q ^Microsoft; then
-    arflags="-nologo"
-    ar_o='-out:$@'
-elif $ar 2>&1 | grep -q "\[D\] "; then
-    arflags="rcD"
-    ar_o='$@'
-else
-    arflags="rc"
-    ar_o='$@'
-fi
-
-# Treat unrecognized flags as errors on MSVC
-platform_test_cpp_condition windows.h "_MSC_FULL_VER >= 193030705" &&
-    platform_check_cflags -options:strict
-platform_test_host_cpp_condition windows.h "_MSC_FULL_VER >= 193030705" &&
-    platform_check_host_cflags -options:strict
-
+# phase 'Checking toolchain'
+# platform_probe_cc cc "$cc" "true"
+# cflags_filter=$_flags_filter
+# cflags_speed=$_cflags_speed
+# cflags_size=$_cflags_size
+# cflags_noopt=$_cflags_noopt
+# add_cflags $_flags $_cflags
+# add_cxxflags $_flags $_cxxflags
+# cc_ldflags=$_ldflags
+# set_ccvars CC
+# set_ccvars CXX
+#
+# platform_probe_cc hostcc "$host_cc"
+# host_cflags_filter=$_flags_filter
+# host_cflags_speed=$_cflags_speed
+# add_host_cflags  $_flags $_cflags
+# set_ccvars HOSTCC
+#
+# test -n "$cc_type" && enable $cc_type ||
+#     warn "Unknown C compiler $cc, unable to select optimal CFLAGS"
+#
+# : ${as_default:=$cc}
+# : ${objcc_default:=$cc}
+# : ${dep_cc_default:=$cc}
+# : ${ld_default:=$cc}
+# : ${host_ld_default:=$host_cc}
+# set_default ar as objcc dep_cc ld ln_s host_ld windres response_files
+#
+# platform_probe_cc as "$as"
+# asflags_filter=$_flags_filter
+# add_asflags $_flags $_cflags
+# set_ccvars AS
+#
+# platform_probe_cc objcc "$objcc"
+# objcflags_filter=$_flags_filter
+# add_objcflags $_flags $_cflags
+# set_ccvars OBJC
+#
+# platform_probe_cc ld "$ld"
+# ldflags_filter=$_flags_filter
+# add_ldflags $_flags $_ldflags
+# test "$cc_type" != "$ld_type" && add_ldflags $cc_ldflags
+# LD_O=${_ld_o-$LD_O}
+# LD_LIB=${_ld_lib-$LD_LIB}
+# LD_PATH=${_ld_path-$LD_PATH}
+#
+# platform_probe_cc hostld "$host_ld"
+# host_ldflags_filter=$_flags_filter
+# add_host_ldflags $_flags $_ldflags
+# HOSTLD_O=${_ld_o-$HOSTLD_O}
+#
+# if [ -z "$CC_DEPFLAGS" ] && [ "$dep_cc" != "$cc" ]; then
+#     platform_probe_cc depcc "$dep_cc"
+#     CCDEP=${_DEPCMD:-$DEPCMD}
+#     CXXDEP=${CCDEP}
+#     CCDEP_FLAGS=${_DEPFLAGS:=$DEPFLAGS}
+#     CXXDEP_FLAGS=${CCDEP_FLAGS}
+#     DEPCCFLAGS=$_flags $_cflags
+#     DEPCXXFLAGS=$_flags $_cxxflags
+# fi
+#
+# if VSLANG=1033 $ar 2>&1 | grep -q ^Microsoft; then
+#     arflags="-nologo"
+#     ar_o='-out:$@'
+# elif $ar 2>&1 | grep -q "\[D\] "; then
+#     arflags="rcD"
+#     ar_o='$@'
+# else
+#     arflags="rc"
+#     ar_o='$@'
+# fi
+#
+# # Treat unrecognized flags as errors on MSVC
+#     platform_check_cflags -options:strict
+#     platform_check_host_cflags -options:strict
+#
 add_cflags $extra_cflags
 add_cxxflags $extra_cxxflags
 add_objcflags $extra_objcflags
@@ -738,422 +739,419 @@ if test -n "$sysroot"; then
     esac
 fi
 
-if test "$cpu" = host; then
-    enabled cross_compile &&
-        warn "--cpu=host makes no sense when cross-compiling."
-
-    case "$cc_type" in
-        gcc|llvm_gcc)
-            check_native(){
-                : > $TMPC
-                $cc $1=native -v -c -o $TMPO $TMPC >$TMPE 2>&1 || return
-                sed -n "/cc1.*$1=/{
-                            s/.*$1=\\([^ ]*\\).*/\\1/
-                            p
-                            q
-                        }" $TMPE
-            }
-            cpu=$(check_native -march || check_native -mcpu)
-        ;;
-        clang)
-            check_native(){
-                : > $TMPC
-                $cc $1=native -v -c -o $TMPO $TMPC >$TMPE 2>&1 || return
-                sed -n "/cc1.*-target-cpu /{
-                            s/.*-target-cpu \\([^ ]*\\).*/\\1/
-                            p
-                            q
-                        }" $TMPE
-            }
-            cpu=$(check_native -march)
-        ;;
-    esac
-
-    test "${cpu:-host}" = host &&
-        die "--cpu=host not supported with compiler $cc"
-fi
-
-# Deal with common $arch aliases
-case "$arch" in
-    aarch64|arm64)
-        arch="aarch64"
-    ;;
-    arm*|iPad*|iPhone*)
-        arch="arm"
-    ;;
-    loongarch*|loong64)
-        arch="loongarch"
-    ;;
-    mips*|IP*)
-        case "$arch" in
-        *el)
-            add_cppflags -EL
-            add_ldflags -EL
-        ;;
-        *eb)
-            add_cppflags -EB
-            add_ldflags -EB
-        ;;
-        esac
-        arch="mips"
-    ;;
-    parisc*|hppa*)
-        arch="parisc"
-    ;;
-    "Power Macintosh"|ppc*|powerpc*)
-        arch="ppc"
-    ;;
-    riscv*)
-        arch="riscv"
-    ;;
-    s390|s390x)
-        arch="s390"
-    ;;
-    sun4*|sparc*)
-        arch="sparc"
-    ;;
-    tilegx|tile-gx)
-        arch="tilegx"
-    ;;
-    wasm*)
-        arch="wasm"
-    ;;
-    i[3-6]86*|i86pc|BePC|x86pc|x86_64|x86_32|amd64)
-        arch="x86"
-    ;;
-esac
-
-is_in $arch $ARCH_LIST || warn "unknown architecture $arch"
-enable $arch
-
-# Add processor-specific flags
-if enabled aarch64; then
-
-    case $cpu in
-        armv*)
-            cpuflags="-march=$cpu"
-        ;;
-        *)
-            cpuflags="-mcpu=$cpu"
-        ;;
-    esac
-
-elif enabled arm; then
-
-    check_arm_arch() {
-        platform_test_cpp_condition stddef.h \
-            "defined __ARM_ARCH_${1}__ || defined __TARGET_ARCH_${2:-$1}" \
-            $cpuflags
-    }
-
-    probe_arm_arch() {
-        if   check_arm_arch 4;        then echo armv4
-        elif check_arm_arch 4T;       then echo armv4t
-        elif check_arm_arch 5;        then echo armv5
-        elif check_arm_arch 5E;       then echo armv5e
-        elif check_arm_arch 5T;       then echo armv5t
-        elif check_arm_arch 5TE;      then echo armv5te
-        elif check_arm_arch 5TEJ;     then echo armv5te
-        elif check_arm_arch 6;        then echo armv6
-        elif check_arm_arch 6J;       then echo armv6j
-        elif check_arm_arch 6K;       then echo armv6k
-        elif check_arm_arch 6Z;       then echo armv6z
-        elif check_arm_arch 6KZ;      then echo armv6zk
-        elif check_arm_arch 6ZK;      then echo armv6zk
-        elif check_arm_arch 6T2;      then echo armv6t2
-        elif check_arm_arch 7;        then echo armv7
-        elif check_arm_arch 7A  7_A;  then echo armv7-a
-        elif check_arm_arch 7S;       then echo armv7-a
-        elif check_arm_arch 7R  7_R;  then echo armv7-r
-        elif check_arm_arch 7M  7_M;  then echo armv7-m
-        elif check_arm_arch 7EM 7E_M; then echo armv7-m
-        elif check_arm_arch 8A  8_A;  then echo armv8-a
-        fi
-    }
-
-    case $cpu in
-        generic)
-            subarch=$(probe_arm_arch | sed 's/[^a-z0-9]//g')
-        ;;
-        armv*)
-            cpuflags="-march=$cpu"
-            subarch=$(echo $cpu | sed 's/[^a-z0-9]//g')
-        ;;
-        *)
-            cpuflags="-mcpu=$cpu"
-            case $cpu in
-                cortex-a*)                               subarch=armv7a  ;;
-                cortex-r*)                               subarch=armv7r  ;;
-                cortex-m*)                 enable thumb; subarch=armv7m  ;;
-                arm11*)                                  subarch=armv6   ;;
-                arm[79]*e*|arm9[24]6*|arm96*|arm102[26]) subarch=armv5te ;;
-                armv4*|arm7*|arm9[24]*)                  subarch=armv4   ;;
-                *)                             subarch=$(probe_arm_arch) ;;
-            esac
-        ;;
-    esac
-
-    case "$subarch" in
-        armv5t*)    enable fast_clz                ;;
-        armv[6-8]*)
-            enable fast_clz
-            disabled fast_unaligned || enable fast_unaligned
-            ;;
-    esac
-
-    platform_check_allcflags -mfp16-format=ieee
-
-elif enabled loongarch; then
-
-    enable simd_align_32
-    enable fast_64bit
-    enable fast_clz
-    enable fast_unaligned
-    case $cpu in
-        la464)
-            cpuflags="-march=$cpu"
-        ;;
-    esac
-elif enabled mips; then
-
-    if [ "$cpu" != "generic" ]; then
-        disable mips32r2
-        disable mips32r5
-        disable mips64r2
-        disable mips32r6
-        disable mips64r6
-        disable loongson2
-        disable loongson3
-        disable mipsdsp
-        disable mipsdspr2
-
-        cpuflags="-march=$cpu"
-
-        case $cpu in
-            # General ISA levels
-            mips1|mips3)
-            ;;
-            mips32r2)
-                enable mips32r2
-            ;;
-            mips32r5)
-                enable mips32r2
-                enable mips32r5
-            ;;
-            mips64r2|mips64r5)
-                enable mips64r2
-                enable loongson3
-            ;;
-            # Cores from MIPS(MTI)
-            24kc)
-                disable mipsfpu
-                enable mips32r2
-            ;;
-            24kf*|24kec|34kc|74Kc|1004kc)
-                enable mips32r2
-            ;;
-            24kef*|34kf*|1004kf*)
-                enable mipsdsp
-                enable mips32r2
-            ;;
-            p5600)
-                enable mips32r2
-                enable mips32r5
-                platform_check_cflags "-mtune=p5600" && platform_check_cflags "-msched-weight -mload-store-pairs -funroll-loops"
-            ;;
-            i6400)
-                enable mips64r6
-                platform_check_cflags "-mtune=i6400 -mabi=64" && platform_check_cflags "-msched-weight -mload-store-pairs -funroll-loops" && platform_check_ldflags "-mabi=64"
-            ;;
-            p6600)
-                enable mips64r6
-                platform_check_cflags "-mtune=p6600 -mabi=64" && platform_check_cflags "-msched-weight -mload-store-pairs -funroll-loops" && platform_check_ldflags "-mabi=64"
-            ;;
-            # Cores from Loongson
-            loongson2e|loongson2f|loongson3*)
-                enable simd_align_16
-                enable fast_64bit
-                enable fast_clz
-                enable fast_cmov
-                enable fast_unaligned
-                disable aligned_stack
-                # When gcc version less than 5.3.0, add -fno-expensive-optimizations flag.
-                if test "$cc_type" = "gcc"; then
-                    case $gcc_basever in
-                        2|2.*|3.*|4.*|5.0|5.1|5.2)
-                        expensive_optimization_flag="-fno-expensive-optimizations"
-                        ;;
-                        *)
-                        expensive_optimization_flag=""
-                        ;;
-                    esac
-                fi
-
-                case $cpu in
-                    loongson3*)
-                        enable loongson3
-                        cpuflags="-march=loongson3a -mhard-float $expensive_optimization_flag"
-                    ;;
-                    loongson2e)
-                        enable loongson2
-                        cpuflags="-march=loongson2e -mhard-float $expensive_optimization_flag"
-                    ;;
-                    loongson2f)
-                        enable loongson2
-                        cpuflags="-march=loongson2f -mhard-float $expensive_optimization_flag"
-                    ;;
-                esac
-            ;;
-            *)
-                warn "unknown MIPS CPU"
-            ;;
-        esac
-
-    else
-        disable mipsdsp
-        disable mipsdspr2
-        # Disable DSP stuff for generic CPU, it can't be detected at runtime.
-        warn 'generic cpu selected'
-    fi
-
-elif enabled ppc; then
-
-    disable ldbrx
-
-    case $(tolower $cpu) in
-        601|ppc601|powerpc601)
-            cpuflags="-mcpu=601"
-            disable altivec
-        ;;
-        603*|ppc603*|powerpc603*)
-            cpuflags="-mcpu=603"
-            disable altivec
-        ;;
-        604*|ppc604*|powerpc604*)
-            cpuflags="-mcpu=604"
-            disable altivec
-        ;;
-        g3|75*|ppc75*|powerpc75*)
-            cpuflags="-mcpu=750"
-            disable altivec
-        ;;
-        g4|745*|ppc745*|powerpc745*)
-            cpuflags="-mcpu=7450"
-            disable vsx
-        ;;
-        74*|ppc74*|powerpc74*)
-            cpuflags="-mcpu=7400"
-            disable vsx
-        ;;
-        g5|970|ppc970|powerpc970)
-            cpuflags="-mcpu=970"
-            disable vsx
-        ;;
-        power[3-6]*)
-            cpuflags="-mcpu=$cpu"
-            disable vsx
-        ;;
-        power[7-9]*|power10)
-            cpuflags="-mcpu=$cpu"
-        ;;
-        cell)
-            cpuflags="-mcpu=cell"
-            enable ldbrx
-            disable vsx
-        ;;
-        e500mc)
-            cpuflags="-mcpu=e500mc"
-            disable altivec
-        ;;
-        e500v2)
-            cpuflags="-mcpu=8548 -mhard-float -mfloat-gprs=double"
-            disable altivec
-            disable dcbzl
-        ;;
-        e500)
-            cpuflags="-mcpu=8540 -mhard-float"
-            disable altivec
-            disable dcbzl
-        ;;
-    esac
-
-elif enabled riscv; then
-
-    platform_check_headers asm/hwprobe.h
-    platform_check_headers sys/hwprobe.h
-
-    if platform_test_cpp_condition stddef.h "__riscv_zbb"; then
-        enable fast_clz
-    fi
-    if platform_test_cpp_condition stddef.h "__riscv_zfhmin"; then
-        enable fast_float16
-    fi
-
-elif enabled sparc; then
-
-    case $cpu in
-        cypress|f93[04]|tsc701|sparcl*|supersparc|hypersparc|niagara|v[789])
-            cpuflags="-mcpu=$cpu"
-        ;;
-        ultrasparc*|niagara[234])
-            cpuflags="-mcpu=$cpu"
-        ;;
-    esac
-
-elif enabled x86; then
-
-    case $cpu in
-        i[345]86|pentium)
-            cpuflags="-march=$cpu"
-            disable i686
-            disable mmx
-        ;;
-        # targets that do NOT support nopl and conditional mov (cmov)
-        pentium-mmx|k6|k6-[23]|winchip-c6|winchip2|c3)
-            cpuflags="-march=$cpu"
-            disable i686
-        ;;
-        # targets that do support conditional mov but on which it's slow
-        pentium4|pentium4m|prescott|nocona)
-            cpuflags="-march=$cpu"
-            enable i686
-            disable fast_cmov
-        ;;
-        # everything else should support nopl and conditional mov (cmov)
-        *)
-            cpuflags="-march=$cpu"
-            enable i686
-            enable fast_cmov
-        ;;
-    esac
-
-else
-
-    if platform_test_cpp_condition inttypes.h "UINTPTR_MAX >= UINT64_MAX"; then
-        enable fast_64bit
-    fi
-
-fi
-
+# if test "$cpu" = host; then
+#     enabled cross_compile &&
+#         warn "--cpu=host makes no sense when cross-compiling."
+#
+#     case "$cc_type" in
+#         gcc|llvm_gcc)
+#             check_native(){
+#                 : > $TMPC
+#                 $cc $1=native -v -c -o $TMPO $TMPC >$TMPE 2>&1 || return
+#                 sed -n "/cc1.*$1=/{
+#                             s/.*$1=\\([^ ]*\\).*/\\1/
+#                             p
+#                             q
+#                         }" $TMPE
+#             }
+#             cpu=$(check_native -march || check_native -mcpu)
+#         ;;
+#         clang)
+#             check_native(){
+#                 : > $TMPC
+#                 $cc $1=native -v -c -o $TMPO $TMPC >$TMPE 2>&1 || return
+#                 sed -n "/cc1.*-target-cpu /{
+#                             s/.*-target-cpu \\([^ ]*\\).*/\\1/
+#                             p
+#                             q
+#                         }" $TMPE
+#             }
+#             cpu=$(check_native -march)
+#         ;;
+#     esac
+#
+#     test "${cpu:-host}" = host &&
+#         die "--cpu=host not supported with compiler $cc"
+# fi
+#
+# # Deal with common $arch aliases
+# case "$arch" in
+#     aarch64|arm64)
+#         arch="aarch64"
+#     ;;
+#     arm*|iPad*|iPhone*)
+#         arch="arm"
+#     ;;
+#     loongarch*|loong64)
+#         arch="loongarch"
+#     ;;
+#     mips*|IP*)
+#         case "$arch" in
+#         *el)
+#             add_cppflags -EL
+#             add_ldflags -EL
+#         ;;
+#         *eb)
+#             add_cppflags -EB
+#             add_ldflags -EB
+#         ;;
+#         esac
+#         arch="mips"
+#     ;;
+#     parisc*|hppa*)
+#         arch="parisc"
+#     ;;
+#     "Power Macintosh"|ppc*|powerpc*)
+#         arch="ppc"
+#     ;;
+#     riscv*)
+#         arch="riscv"
+#     ;;
+#     s390|s390x)
+#         arch="s390"
+#     ;;
+#     sun4*|sparc*)
+#         arch="sparc"
+#     ;;
+#     tilegx|tile-gx)
+#         arch="tilegx"
+#     ;;
+#     wasm*)
+#         arch="wasm"
+#     ;;
+#     i[3-6]86*|i86pc|BePC|x86pc|x86_64|x86_32|amd64)
+#         arch="x86"
+#     ;;
+# esac
+#
+# is_in $arch $ARCH_LIST || warn "unknown architecture $arch"
+# enable $arch
+#
+# # Add processor-specific flags
+# if enabled aarch64; then
+#
+#     case $cpu in
+#         armv*)
+#             cpuflags="-march=$cpu"
+#         ;;
+#         *)
+#             cpuflags="-mcpu=$cpu"
+#         ;;
+#     esac
+#
+# elif enabled arm; then
+#
+#     check_arm_arch() {
+#         platform_test_cpp_condition stddef.h \
+#             "defined __ARM_ARCH_${1}__ || defined __TARGET_ARCH_${2:-$1}" \
+#             $cpuflags
+#     }
+#
+#     probe_arm_arch() {
+#         if   check_arm_arch 4;        then echo armv4
+#         elif check_arm_arch 4T;       then echo armv4t
+#         elif check_arm_arch 5;        then echo armv5
+#         elif check_arm_arch 5E;       then echo armv5e
+#         elif check_arm_arch 5T;       then echo armv5t
+#         elif check_arm_arch 5TE;      then echo armv5te
+#         elif check_arm_arch 5TEJ;     then echo armv5te
+#         elif check_arm_arch 6;        then echo armv6
+#         elif check_arm_arch 6J;       then echo armv6j
+#         elif check_arm_arch 6K;       then echo armv6k
+#         elif check_arm_arch 6Z;       then echo armv6z
+#         elif check_arm_arch 6KZ;      then echo armv6zk
+#         elif check_arm_arch 6ZK;      then echo armv6zk
+#         elif check_arm_arch 6T2;      then echo armv6t2
+#         elif check_arm_arch 7;        then echo armv7
+#         elif check_arm_arch 7A  7_A;  then echo armv7-a
+#         elif check_arm_arch 7S;       then echo armv7-a
+#         elif check_arm_arch 7R  7_R;  then echo armv7-r
+#         elif check_arm_arch 7M  7_M;  then echo armv7-m
+#         elif check_arm_arch 7EM 7E_M; then echo armv7-m
+#         elif check_arm_arch 8A  8_A;  then echo armv8-a
+#         fi
+#     }
+#
+#     case $cpu in
+#         generic)
+#             subarch=$(probe_arm_arch | sed 's/[^a-z0-9]//g')
+#         ;;
+#         armv*)
+#             cpuflags="-march=$cpu"
+#             subarch=$(echo $cpu | sed 's/[^a-z0-9]//g')
+#         ;;
+#         *)
+#             cpuflags="-mcpu=$cpu"
+#             case $cpu in
+#                 cortex-a*)                               subarch=armv7a  ;;
+#                 cortex-r*)                               subarch=armv7r  ;;
+#                 cortex-m*)                 enable thumb; subarch=armv7m  ;;
+#                 arm11*)                                  subarch=armv6   ;;
+#                 arm[79]*e*|arm9[24]6*|arm96*|arm102[26]) subarch=armv5te ;;
+#                 armv4*|arm7*|arm9[24]*)                  subarch=armv4   ;;
+#                 *)                             subarch=$(probe_arm_arch) ;;
+#             esac
+#         ;;
+#     esac
+#
+#     case "$subarch" in
+#         armv5t*)    enable fast_clz                ;;
+#         armv[6-8]*)
+#             enable fast_clz
+#             disabled fast_unaligned || enable fast_unaligned
+#             ;;
+#     esac
+#
+#     platform_check_allcflags -mfp16-format=ieee
+#
+# elif enabled loongarch; then
+#
+#     enable simd_align_32
+#     enable fast_64bit
+#     enable fast_clz
+#     enable fast_unaligned
+#     case $cpu in
+#         la464)
+#             cpuflags="-march=$cpu"
+#         ;;
+#     esac
+# elif enabled mips; then
+#
+#     if [ "$cpu" != "generic" ]; then
+#         disable mips32r2
+#         disable mips32r5
+#         disable mips64r2
+#         disable mips32r6
+#         disable mips64r6
+#         disable loongson2
+#         disable loongson3
+#         disable mipsdsp
+#         disable mipsdspr2
+#
+#         cpuflags="-march=$cpu"
+#
+#         case $cpu in
+#             # General ISA levels
+#             mips1|mips3)
+#             ;;
+#             mips32r2)
+#                 enable mips32r2
+#             ;;
+#             mips32r5)
+#                 enable mips32r2
+#                 enable mips32r5
+#             ;;
+#             mips64r2|mips64r5)
+#                 enable mips64r2
+#                 enable loongson3
+#             ;;
+#             # Cores from MIPS(MTI)
+#             24kc)
+#                 disable mipsfpu
+#                 enable mips32r2
+#             ;;
+#             24kf*|24kec|34kc|74Kc|1004kc)
+#                 enable mips32r2
+#             ;;
+#             24kef*|34kf*|1004kf*)
+#                 enable mipsdsp
+#                 enable mips32r2
+#             ;;
+#             p5600)
+#                 enable mips32r2
+#                 enable mips32r5
+#                 platform_check_cflags "-mtune=p5600" && platform_check_cflags "-msched-weight -mload-store-pairs -funroll-loops"
+#             ;;
+#             i6400)
+#                 enable mips64r6
+#                 platform_check_cflags "-mtune=i6400 -mabi=64" && platform_check_cflags "-msched-weight -mload-store-pairs -funroll-loops" && platform_check_ldflags "-mabi=64"
+#             ;;
+#             p6600)
+#                 enable mips64r6
+#                 platform_check_cflags "-mtune=p6600 -mabi=64" && platform_check_cflags "-msched-weight -mload-store-pairs -funroll-loops" && platform_check_ldflags "-mabi=64"
+#             ;;
+#             # Cores from Loongson
+#             loongson2e|loongson2f|loongson3*)
+#                 enable simd_align_16
+#                 enable fast_64bit
+#                 enable fast_clz
+#                 enable fast_cmov
+#                 enable fast_unaligned
+#                 disable aligned_stack
+#                 # When gcc version less than 5.3.0, add -fno-expensive-optimizations flag.
+#                 if test "$cc_type" = "gcc"; then
+#                     case $gcc_basever in
+#                         2|2.*|3.*|4.*|5.0|5.1|5.2)
+#                         expensive_optimization_flag="-fno-expensive-optimizations"
+#                         ;;
+#                         *)
+#                         expensive_optimization_flag=""
+#                         ;;
+#                     esac
+#                 fi
+#
+#                 case $cpu in
+#                     loongson3*)
+#                         enable loongson3
+#                         cpuflags="-march=loongson3a -mhard-float $expensive_optimization_flag"
+#                     ;;
+#                     loongson2e)
+#                         enable loongson2
+#                         cpuflags="-march=loongson2e -mhard-float $expensive_optimization_flag"
+#                     ;;
+#                     loongson2f)
+#                         enable loongson2
+#                         cpuflags="-march=loongson2f -mhard-float $expensive_optimization_flag"
+#                     ;;
+#                 esac
+#             ;;
+#             *)
+#                 warn "unknown MIPS CPU"
+#             ;;
+#         esac
+#
+#     else
+#         disable mipsdsp
+#         disable mipsdspr2
+#         # Disable DSP stuff for generic CPU, it can't be detected at runtime.
+#         warn 'generic cpu selected'
+#     fi
+#
+# elif enabled ppc; then
+#
+#     disable ldbrx
+#
+#     case $(tolower $cpu) in
+#         601|ppc601|powerpc601)
+#             cpuflags="-mcpu=601"
+#             disable altivec
+#         ;;
+#         603*|ppc603*|powerpc603*)
+#             cpuflags="-mcpu=603"
+#             disable altivec
+#         ;;
+#         604*|ppc604*|powerpc604*)
+#             cpuflags="-mcpu=604"
+#             disable altivec
+#         ;;
+#         g3|75*|ppc75*|powerpc75*)
+#             cpuflags="-mcpu=750"
+#             disable altivec
+#         ;;
+#         g4|745*|ppc745*|powerpc745*)
+#             cpuflags="-mcpu=7450"
+#             disable vsx
+#         ;;
+#         74*|ppc74*|powerpc74*)
+#             cpuflags="-mcpu=7400"
+#             disable vsx
+#         ;;
+#         g5|970|ppc970|powerpc970)
+#             cpuflags="-mcpu=970"
+#             disable vsx
+#         ;;
+#         power[3-6]*)
+#             cpuflags="-mcpu=$cpu"
+#             disable vsx
+#         ;;
+#         power[7-9]*|power10)
+#             cpuflags="-mcpu=$cpu"
+#         ;;
+#         cell)
+#             cpuflags="-mcpu=cell"
+#             enable ldbrx
+#             disable vsx
+#         ;;
+#         e500mc)
+#             cpuflags="-mcpu=e500mc"
+#             disable altivec
+#         ;;
+#         e500v2)
+#             cpuflags="-mcpu=8548 -mhard-float -mfloat-gprs=double"
+#             disable altivec
+#             disable dcbzl
+#         ;;
+#         e500)
+#             cpuflags="-mcpu=8540 -mhard-float"
+#             disable altivec
+#             disable dcbzl
+#         ;;
+#     esac
+#
+# elif enabled riscv; then
+#
+#
+#     if platform_test_cpp_condition stddef.h "__riscv_zbb"; then
+#         enable fast_clz
+#     fi
+#     if platform_test_cpp_condition stddef.h "__riscv_zfhmin"; then
+#         enable fast_float16
+#     fi
+#
+# elif enabled sparc; then
+#
+#     case $cpu in
+#         cypress|f93[04]|tsc701|sparcl*|supersparc|hypersparc|niagara|v[789])
+#             cpuflags="-mcpu=$cpu"
+#         ;;
+#         ultrasparc*|niagara[234])
+#             cpuflags="-mcpu=$cpu"
+#         ;;
+#     esac
+#
+# elif enabled x86; then
+#
+#     case $cpu in
+#         i[345]86|pentium)
+#             cpuflags="-march=$cpu"
+#             disable i686
+#             disable mmx
+#         ;;
+#         # targets that do NOT support nopl and conditional mov (cmov)
+#         pentium-mmx|k6|k6-[23]|winchip-c6|winchip2|c3)
+#             cpuflags="-march=$cpu"
+#             disable i686
+#         ;;
+#         # targets that do support conditional mov but on which it's slow
+#         pentium4|pentium4m|prescott|nocona)
+#             cpuflags="-march=$cpu"
+#             enable i686
+#             disable fast_cmov
+#         ;;
+#         # everything else should support nopl and conditional mov (cmov)
+#         *)
+#             cpuflags="-march=$cpu"
+#             enable i686
+#             enable fast_cmov
+#         ;;
+#     esac
+#
+# else
+#
+#     if platform_test_cpp_condition inttypes.h "UINTPTR_MAX >= UINT64_MAX"; then
+#         enable fast_64bit
+#     fi
+#
+# fi
+#
 if [ "$cpu" != generic ]; then
     add_allcflags $cpuflags
     add_asflags $cpuflags
     test "$cc_type" = "$ld_type" && add_ldflags $cpuflags
 fi
 
-# compiler sanity check
-platform_test_exec <<EOF
-int main(void){ return 0; }
-EOF
-if test "$?" != 0; then
-    echo "$cc is unable to create an executable file."
-    if test -z "$cross_prefix" && ! enabled cross_compile ; then
-        echo "If $cc is a cross-compiler, use the --enable-cross-compile option."
-        echo "Only do this if you know what cross compiling means."
-    fi
-    die "C compiler test failed."
-fi
-
+# # compiler sanity check
+# int main(void){ return 0; }
+# EOF
+# if test "$?" != 0; then
+#     echo "$cc is unable to create an executable file."
+#     if test -z "$cross_prefix" && ! enabled cross_compile ; then
+#         echo "If $cc is a cross-compiler, use the --enable-cross-compile option."
+#         echo "Only do this if you know what cross compiling means."
+#     fi
+#     die "C compiler test failed."
+# fi
+#
 add_cppflags -D_ISOC11_SOURCE
 add_cxxflags -D__STDC_CONSTANT_MACROS
 #platform_check_cxxflags_cc -std=c++23 ctype.h "__cplusplus >= 201103L" ||
@@ -1184,7 +1182,6 @@ platform_check_cppflags -D_LARGEFILE_SOURCE
 
 add_host_cppflags -D_ISOC11_SOURCE
 #platform_check_host_cflags_cc -std=$stdc ctype.h "__STDC_VERSION__ >= 201112L" ||
-#    platform_check_host_cflags_cc -std=c11 ctype.h "__STDC_VERSION__ >= 201112L" || die "Host compiler lacks C11 support"
 
 platform_check_host_cflags -Wall
 platform_check_host_cflags $host_cflags_speed
@@ -1895,24 +1892,13 @@ fi
 
 phase 'Checking system features and libraries'
 if ! disabled network; then
-    platform_check_func getaddrinfo $network_extralibs
-    platform_check_func inet_aton $network_extralibs
 
-    platform_check_type netdb.h "struct addrinfo"
-    platform_check_type netinet/in.h "struct group_source_req" -D_BSD_SOURCE
-    platform_check_type netinet/in.h "struct ip_mreq_source" -D_BSD_SOURCE
-    platform_check_type netinet/in.h "struct ipv6_mreq" -D_DARWIN_C_SOURCE
-    platform_check_type poll.h "struct pollfd"
-    platform_check_type netinet/sctp.h "struct sctp_event_subscribe"
     platform_check_struct "sys/socket.h" "struct msghdr" msg_flags
     platform_check_struct "sys/types.h sys/socket.h" "struct sockaddr" sa_len
-    platform_check_type netinet/in.h "struct sockaddr_in6"
-    platform_check_type "sys/types.h sys/socket.h" "struct sockaddr_storage"
-    platform_check_type "sys/types.h sys/socket.h" socklen_t
 
     # Prefer arpa/inet.h over winsock2
     if platform_check_headers arpa/inet.h ; then
-        platform_check_func closesocket
+:
     elif platform_check_headers winsock2.h ; then
         platform_check_func_headers winsock2.h closesocket -lws2 &&
             network_extralibs="-lws2" ||
@@ -1920,15 +1906,7 @@ if ! disabled network; then
             network_extralibs="-lws2_32"; } || disable winsock2_h network
         platform_check_func_headers ws2tcpip.h getaddrinfo $network_extralibs
 
-        platform_check_type ws2tcpip.h socklen_t
-        platform_check_type ws2tcpip.h "struct addrinfo"
-        platform_check_type ws2tcpip.h "struct group_source_req"
-        platform_check_type ws2tcpip.h "struct ip_mreq_source"
-        platform_check_type ws2tcpip.h "struct ipv6_mreq"
-        platform_check_type winsock2.h "struct pollfd"
         platform_check_struct winsock2.h "struct sockaddr" sa_len
-        platform_check_type ws2tcpip.h "struct sockaddr_in6"
-        platform_check_type ws2tcpip.h "struct sockaddr_storage"
     else
         disable network
     fi
@@ -1981,30 +1959,12 @@ platform_check_func_headers malloc.h _aligned_malloc     && enable aligned_mallo
 platform_check_func  ${malloc_prefix}memalign            && enable memalign
 platform_check_func  ${malloc_prefix}posix_memalign      && enable posix_memalign
 
-platform_check_func  access
 platform_check_func_headers stdlib.h arc4random_buf
 platform_check_lib   clock_gettime time.h clock_gettime || platform_check_lib clock_gettime time.h clock_gettime -lrt
-platform_check_func  fcntl
-platform_check_func  fork
-platform_check_func  gethrtime
-platform_check_func  getopt
-platform_check_func  getrusage
-platform_check_func  gettimeofday
-platform_check_func  isatty
-platform_check_func  mkstemp
-platform_check_func  mmap
-platform_check_func  mprotect
 # Solaris has nanosleep in -lrt, OpenSolaris no longer needs that
 platform_check_func_headers time.h nanosleep || platform_check_lib nanosleep time.h nanosleep -lrt
 platform_check_func_headers sys/prctl.h prctl
-platform_check_func  sched_getaffinity
-platform_check_func  setrlimit
 platform_check_struct "sys/stat.h" "struct stat" st_mtim.tv_nsec -D_BSD_SOURCE
-platform_check_func  strerror_r
-platform_check_func  sysconf
-platform_check_func  sysctl
-platform_check_func  tempnam
-platform_check_func  usleep
 
 platform_check_func_headers conio.h kbhit
 platform_check_func_headers io.h setmode
@@ -2045,35 +2005,12 @@ if enabled xlib; then
         disable xlib
 fi
 
-platform_check_headers direct.h
-platform_check_headers dirent.h
-platform_check_headers dxgidebug.h
-platform_check_headers dxva.h
-platform_check_headers dxva2api.h -D_WIN32_WINNT=0x0600
-platform_check_headers io.h
 enabled libdrm &&
-    platform_check_headers linux/dma-buf.h
 
-platform_check_headers linux/perf_event.h
-platform_check_headers malloc.h
-platform_check_headers mftransform.h
-platform_check_headers net/udplite.h
-platform_check_headers poll.h
-platform_check_headers pthread_np.h
-platform_check_headers sys/param.h
-platform_check_headers sys/resource.h
-platform_check_headers sys/select.h
-platform_check_headers sys/time.h
-platform_check_headers sys/un.h
-platform_check_headers termios.h
-platform_check_headers unistd.h
-platform_check_headers valgrind/valgrind.h
 platform_check_func_headers VideoToolbox/VTCompressionSession.h VTCompressionSessionPrepareToEncodeFrames -framework VideoToolbox
 platform_check_func_headers VideoToolbox/VideoToolbox.h VTDecompressionSessionDecodeFrame -framework VideoToolbox
 platform_check_func_headers VideoToolbox/VideoToolbox.h VTPixelTransferSessionCreate -framework VideoToolbox
 platform_check_func_headers VideoToolbox/VideoToolbox.h VTPixelRotationSessionCreate -framework VideoToolbox
-platform_check_headers windows.h
-platform_check_headers asm/types.h
 
 # it seems there are versions of clang in some distros that try to use the
 # gcc headers, which explodes for stdatomic
@@ -2111,7 +2048,7 @@ platform_check_apple_framework CoreVideo
 platform_check_apple_framework CoreAudio
 
 enabled audiotoolbox && {
-    platform_check_type AudioToolbox/AudioToolbox.h AudioObjectPropertyAddress
+:
 }
 
 enabled avfoundation && {
@@ -2167,7 +2104,6 @@ platform_test_code cc "windows.h d3d12video.h" "D3D12_VIDEO_ENCODER_CODEC c = D3
 platform_test_code cc "windows.h d3d12video.h" "D3D12_FEATURE_DATA_VIDEO_ENCODER_INTRA_REFRESH_MODE check = { 0 };" && enable d3d12_intra_refresh
 platform_test_code cc "windows.h d3d12video.h" "D3D12_VIDEO_ENCODER_MOTION_ESTIMATION_PRECISION_MODE m = D3D12_VIDEO_ENCODER_MOTION_ESTIMATION_PRECISION_MODE_EIGHTH_PIXEL; (void)m;" && enable d3d12va_me_precision_eighth_pixel
 platform_test_code cc "windows.h d3d12video.h" "D3D12_FEATURE_DATA_VIDEO_MOTION_ESTIMATOR check = { 0 };" && enable d3d12_motion_estimator
-platform_check_type "windows.h" "DPI_AWARENESS_CONTEXT" -D_WIN32_WINNT=0x0A00
 platform_check_type "windows.h security.h schnlsp.h" SecPkgContext_KeyingMaterialInfo -DSECURITY_WIN32
 platform_check_type "d3d9.h dxva2api.h" DXVA2_ConfigPictureDecode -D_WIN32_WINNT=0x0602
 platform_check_func_headers mfapi.h MFCreateAlignedMemoryBuffer -lmfplat
@@ -2176,9 +2112,6 @@ platform_check_type "windows.h windows.graphics.capture.h" __x_ABI_CWindows_CGra
 platform_check_type "windows.h windows.graphics.capture.interop.h" IGraphicsCaptureItemInterop -D_WIN32_WINNT=0x0A00 -DWINDOWS_FOUNDATION_UNIVERSALAPICONTRACT_VERSION=0x130000 -DCOBJMACROS
 platform_check_type "windows.h windows.graphics.directx.direct3d11.interop.h" IDirect3DDxgiInterfaceAccess -D_WIN32_WINNT=0x0A00 -DWINDOWS_FOUNDATION_UNIVERSALAPICONTRACT_VERSION=0x130000 -DCOBJMACROS
 
-platform_check_type "vdpau/vdpau.h" "VdpPictureInfoHEVC"
-platform_check_type "vdpau/vdpau.h" "VdpPictureInfoVP9"
-platform_check_type "vdpau/vdpau.h" "VdpPictureInfoAV1"
 
 if [ -z "$nvccflags" ]; then
     nvccflags=$nvccflags_default
@@ -2247,7 +2180,6 @@ if ! disabled pthreads && ! enabled w32threads && ! enabled os2threads; then
     # elif platform_check_func pthread_join && platform_check_func pthread_create; then
     #     enable pthreads
     # fi
-    # platform_check_cc pthreads "pthread.h" "static pthread_mutex_t atomic_lock = PTHREAD_MUTEX_INITIALIZER"
 
     # if enabled pthreads; then
     #     platform_check_builtin sem_timedwait semaphore.h "sem_t *s; sem_init(s,0,0); sem_timedwait(s,0); sem_destroy(s)" $pthreads_extralibs
@@ -2262,7 +2194,6 @@ if ! disabled pthreads && ! enabled w32threads && ! enabled os2threads; then
 fi
 
 # enabled  zlib && { platform_check_pkg_config zlib zlib "zlib.h" zlibVersion ||
-#                    platform_check_lib zlib   zlib.h      zlibVersion    -lz; }
 enabled bzlib && platform_check_lib bzlib bzlib.h BZ2_bzlibVersion    -lbz2
 enabled  lzma && platform_check_lib lzma   lzma.h lzma_version_number -llzma
 
@@ -2592,7 +2523,6 @@ fi
 if enabled sdl2; then
     enable sdl2
     # SDL2_CONFIG="${cross_prefix}sdl2-config"
-    # platform_test_pkg_config sdl2 "sdl2 >= 2.0.1 sdl2 < 3.0.0" SDL_events.h SDL_PollEvent
     # if disabled sdl2 && "${SDL2_CONFIG}" --version > /dev/null 2>&1; then
     #     sdl2_cflags=$("${SDL2_CONFIG}" --cflags)
     #     sdl2_extralibs=$("${SDL2_CONFIG}" --libs)
@@ -2621,7 +2551,6 @@ enabled securetransport &&
         disable securetransport
 
 enabled securetransport &&
-    platform_check_func SecItemImport "-framework CoreFoundation -framework Security"
 
 enabled schannel &&
     platform_check_func_headers "windows.h security.h" InitializeSecurityContext -DSECURITY_WIN32 -lsecur32 &&
@@ -2643,8 +2572,6 @@ pod2man --help     > /dev/null 2>&1 && enable pod2man   || disable pod2man
 rsync --help 2> /dev/null | grep -q 'contimeout=' && enable rsync_contimeout || disable rsync_contimeout
 xmllint --version  > /dev/null 2>&1 && enable xmllint   || disable xmllint
 
-platform_check_headers linux/fb.h
-platform_check_headers linux/videodev2.h
 platform_test_code cc linux/videodev2.h "struct v4l2_frmsizeenum vfse; vfse.discrete.width = 0;" && enable_sanitized struct_v4l2_frmivalenum_discrete
 platform_test_code cc sys/ioctl.h "int ioctl(int, int, ...)" && enable ioctl_posix
 
@@ -2662,7 +2589,6 @@ if enabled v4l2_m2m; then
     platform_check_cc vp9_v4l2_m2m linux/videodev2.h "int i = V4L2_PIX_FMT_VP9;"
 fi
 
-platform_check_headers sys/videoio.h
 platform_test_code cc sys/videoio.h "struct v4l2_frmsizeenum vfse; vfse.discrete.width = 0;" && enable_sanitized struct_v4l2_frmivalenum_discrete
 
 platform_check_lib user32 "windows.h winuser.h" GetShellWindow -luser32
@@ -2671,7 +2597,6 @@ platform_check_lib vfw32 "windows.h vfw.h" capCreateCaptureWindow -lvfw32
 # w32api 3.12 had it defined wrong
 platform_check_cpp_condition vfwcap_defines vfw.h "WM_CAP_DRIVER_CONNECT > WM_USER"
 
-platform_check_type "dshow.h" IBaseFilter
 
 if platform_check_struct sys/soundcard.h audio_buf_info bytes; then
     enable_sanitized sys/soundcard.h
@@ -2858,7 +2783,7 @@ int main(void) { return 0; }
 EOF
 
 if enabled nvenc; then
-    platform_check_type "ffnvcodec/nvEncodeAPI.h" "NV_ENC_PIC_PARAMS_AV1"
+:
 fi
 
 if enabled_any nvdec cuvid; then
@@ -3165,10 +3090,12 @@ case $ld_type in
     ;;
 esac
 
+response_files="no"
 if [ "$response_files" != "no" ]; then
     ar_out=${FFTMPDIR}/test$LIBSUF
     respfile="@/dev/null"
     out_arg="$(echo $ar_o | sed "s;\$@;$ar_out;g")"
+: ${ar:=ar}
     if platform_test_cmd $ar $arflags $out_arg $respfile; then
         response_files="yes"
     elif [ "$response_files" = "auto" ]; then
@@ -3232,6 +3159,7 @@ for thread in $THREADS_LIST; do
     fi
 done
 
+enable stdatomic
 if disabled stdatomic; then
     if enabled atomics_win32; then
         add_cppflags '-I\$(SRC_PATH)/compat/atomics/win32'
@@ -3474,6 +3402,7 @@ echo "datadir=$(eval c_escape $datadir)"
 echo "cc_ident=$(c_escape ${cc_ident:-Unknown compiler})"
 enabled getenv && echo "getenv=yes"
 ) | python ffbuild/codegen.py generate_config --template config_h.jinja --output $TMPH --vars-stdin --env-vars $VAR_LIST
+cp_if_changed $TMPH config.h
 
 if enabled x86asm; then
     append config_files $TMPASM

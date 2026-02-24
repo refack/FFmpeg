@@ -1,0 +1,421 @@
+
+Parsing options
+./configure: line 572: target_exec: command not found
+checking check_cppflags -D_FILE_OFFSET_BITS=64... yes
+checking check_cppflags -D_LARGEFILE_SOURCE... yes
+checking check_host_cflags -Wall... yes
+checking check_host_cflags ... yes
+checking check_64bit x86_32... yes
+./configure: line 1516: /tmp/dest_TcbkRAUS: Is a directory
+rm: cannot remove '/tmp/name_XxGAWYIg': No such file or directory
+checking check_64bit x86_32... no
+checking test_cpp ... yes
+checking test_cc ... yes
+./configure: line 1535: probe_libc: command not found
+checking check_compile_assert flt_lim... yes
+checking check_compile_assert flt_lim... yes
+checking check_allcflags -fomit-frame-pointer... yes
+checking check_cxxflags -fomit-frame-pointer... yes
+checking check_objcflags -fomit-frame-pointer... no
+checking test_cc ... yes
+checking check_inline_asm inline_asm... yes
+checking check_cc pragma_deprecated... yes
+checking check_cc pragma_deprecated... no
+checking check_cc const_nan... yes
+checking check_cc const_nan... yes
+checking check_inline_asm inline_asm_nonlocal_labels... yes
+checking check_cc intrinsics_neon... no
+checking check_cc intrinsics_neon... yes
+checking check_ldflags -Wl,-z,noexecstack... yes
+
+Checking system features and libraries
+checking check_struct struct msghdr.msg_flags sys/socket.h... yes
+checking check_struct struct sockaddr.sa_len sys/types.h... no
+checking check_struct struct sockaddr.sa_len sys/socket.h... no
+checking check_headers arpa/inet.h... yes
+checking check_headers arpa/inet.h... no
+checking check_headers arpa/inet.h... yes
+checking check_headers arpa/inet.h... yes
+checking check_headers arpa/inet.h... yes
+checking check_func_headers malloc.h... no
+checking check_func_headers _aligned_malloc... no
+checking check_func_headers malloc.h... yes
+checking check_func_headers _aligned_malloc... yes
+checking test_ld cc... yes
+checking check_func_headers stdlib.h... no
+checking check_func_headers arc4random_buf... no
+checking check_func_headers time.h... yes
+checking check_func_headers clock_gettime... yes
+checking check_func_headers time.h... yes
+checking check_func_headers clock_gettime... yes
+checking check_func_headers time.h... yes
+checking check_func_headers nanosleep... yes
+checking check_func_headers time.h... yes
+checking check_func_headers nanosleep... yes
+checking check_func_headers sys/prctl.h... yes
+checking check_func_headers prctl... yes
+checking check_struct struct stat.st_mtim.tv_nsec sys/stat.h... yes
+checking check_func_headers conio.h... no
+checking check_func_headers kbhit... no
+checking check_func_headers io.h... no
+checking check_func_headers setmode... no
+checking check_func_headers lzo/lzo1x.h... no
+checking check_func_headers lzo1x_999_compress... no
+checking check_func_headers mach/mach_time.h... no
+checking check_func_headers mach_absolute_time... no
+checking check_func_headers stdlib.h... yes
+checking check_func_headers getenv... yes
+checking check_func_headers sys/stat.h... yes
+checking check_func_headers lstat... yes
+checking check_func_headers sys/auxv.h... yes
+checking check_func_headers getauxval... yes
+checking check_func_headers sys/auxv.h... no
+checking check_func_headers elf_aux_info... no
+checking check_func_headers sys/sysctl.h... no
+checking check_func_headers sysctlbyname... no
+checking check_func_headers windows.h... no
+checking check_func_headers GetModuleHandle... no
+checking check_func_headers windows.h... no
+checking check_func_headers GetProcessAffinityMask... no
+checking check_func_headers windows.h... no
+checking check_func_headers GetProcessTimes... no
+checking check_func_headers windows.h... no
+checking check_func_headers GetStdHandle... no
+checking check_func_headers windows.h... no
+checking check_func_headers GetSystemTimeAsFileTime... no
+checking check_func_headers windows.h... no
+checking check_func_headers LoadLibrary... no
+checking check_func_headers windows.h... no
+checking check_func_headers MapViewOfFile... no
+checking check_func_headers windows.h... no
+checking check_func_headers PeekNamedPipe... no
+checking check_func_headers windows.h... no
+checking check_func_headers SetConsoleTextAttribute... no
+checking check_func_headers windows.h... no
+checking check_func_headers SetConsoleCtrlHandler... no
+checking check_func_headers windows.h... no
+checking check_func_headers SetDllDirectory... no
+checking check_func_headers windows.h... no
+checking check_func_headers Sleep... no
+checking check_func_headers windows.h... no
+checking check_func_headers VirtualAlloc... no
+checking check_func_headers glob.h... yes
+checking check_func_headers glob... yes
+checking check_func_headers glob.h... yes
+checking check_func_headers glob... yes
+checking check_func_headers X11/Xlib.h... yes
+checking check_func_headers XPending... yes
+checking check_func_headers X11/Xlib.h... yes
+checking check_func_headers XPending... yes
+checking check_func_headers X11/Xlib.h... yes
+checking check_func_headers XPending... yes
+checking check_func_headers X11/Xlib.h... yes
+checking check_func_headers X11/extensions/XShm.h... yes
+checking check_func_headers XShmAttach... yes
+checking check_func_headers X11/Xlib.h... yes
+checking check_func_headers X11/extensions/XShm.h... yes
+checking check_func_headers XShmAttach... yes
+checking check_func_headers X11/Xlib.h... no
+checking check_func_headers X11/extensions/XShm.h... no
+checking check_func_headers XShmAttach... no
+checking check_func_headers X11/Xlib.h... no
+checking check_func_headers X11/extensions/Xvlib.h... no
+checking check_func_headers XvGetPortAttribute... no
+checking check_func_headers VideoToolbox/VTCompressionSession.h... no
+checking check_func_headers VTCompressionSessionPrepareToEncodeFrames... no
+checking check_func_headers VideoToolbox/VideoToolbox.h... no
+checking check_func_headers VTDecompressionSessionDecodeFrame... no
+checking check_func_headers VideoToolbox/VideoToolbox.h... no
+checking check_func_headers VTPixelTransferSessionCreate... no
+checking check_func_headers VideoToolbox/VideoToolbox.h... no
+checking check_func_headers VTPixelRotationSessionCreate... no
+checking check_func_headers VideoToolbox/VideoToolbox.h... yes
+checking check_func_headers VTPixelRotationSessionCreate... yes
+checking check_func_headers VideoToolbox/VideoToolbox.h... yes
+checking check_func_headers VTPixelRotationSessionCreate... yes
+checking check_func_headers windows.h... no
+checking check_func_headers RegCloseKey... no
+checking check_func_headers windows.h... no
+checking check_func_headers bcrypt.h... no
+checking check_func_headers BCryptGenRandom... no
+checking check_func_headers windows.h... no
+checking check_func_headers objbase.h... no
+checking check_func_headers CoTaskMemFree... no
+checking check_func_headers windows.h... no
+checking check_func_headers shellapi.h... no
+checking check_func_headers CommandLineToArgvW... no
+checking check_func_headers windows.h... no
+checking check_func_headers psapi.h... no
+checking check_func_headers GetProcessMemoryInfo... no
+checking check_func_headers android/native_window.h... no
+checking check_func_headers ANativeWindow_acquire... no
+checking check_func_headers stdint.h... no
+checking check_func_headers media/NdkMediaFormat.h... no
+checking check_func_headers AMediaFormat_new... no
+checking check_func_headers stdbool.h... no
+checking check_func_headers stdint.h... no
+checking check_func_headers camera/NdkCameraManager.h... no
+checking check_func_headers ACameraManager_create... no
+checking check_func_headers stdbool.h... no
+checking check_func_headers stdint.h... no
+checking check_func_headers camera/NdkCameraManager.h... no
+checking check_func_headers ACameraManager_create... no
+checking check_func_headers stdbool.h... no
+checking check_func_headers stdint.h... no
+checking check_func_headers camera/NdkCameraManager.h... no
+checking check_func_headers ACameraManager_create... no
+checking check_func_headers stdbool.h... no
+checking check_func_headers stdint.h... no
+checking check_func_headers camera/NdkCameraManager.h... no
+checking check_func_headers ACameraManager_create... no
+checking check_func_headers stdbool.h... no
+checking check_func_headers stdint.h... no
+checking check_func_headers camera/NdkCameraManager.h... no
+checking check_func_headers ACameraManager_create... no
+checking check_func_headers stdbool.h... no
+checking check_func_headers stdint.h... no
+checking check_func_headers camera/NdkCameraManager.h... no
+checking check_func_headers ACameraManager_create... no
+checking check_func_headers stdbool.h... no
+checking check_func_headers stdint.h... no
+checking check_func_headers camera/NdkCameraManager.h... no
+checking check_func_headers ACameraManager_create... no
+checking check_func_headers stdbool.h... no
+checking check_func_headers stdint.h... no
+checking check_func_headers camera/NdkCameraManager.h... no
+checking check_func_headers ACameraManager_create... no
+checking check_func_headers stdbool.h... no
+checking check_func_headers stdint.h... no
+checking check_func_headers camera/NdkCameraManager.h... no
+checking check_func_headers ACameraManager_create... no
+checking check_func_headers stdbool.h... no
+checking check_func_headers stdint.h... no
+checking check_func_headers camera/NdkCameraManager.h... no
+checking check_func_headers ACameraManager_create... no
+checking check_func_headers stdbool.h... no
+checking check_func_headers stdint.h... no
+checking check_func_headers camera/NdkCameraManager.h... no
+checking check_func_headers ACameraManager_create... no
+checking check_struct struct rusage.ru_maxrss sys/time.h... yes
+checking check_struct struct rusage.ru_maxrss sys/resource.h... yes
+checking check_type DXVA_PicParams_AV1 windows.h... no
+checking check_type DXVA_PicParams_AV1 dxva.h... no
+checking check_type DXVA_PicParams_HEVC windows.h... no
+checking check_type DXVA_PicParams_HEVC dxva.h... no
+checking check_type DXVA_PicParams_VP9 windows.h... no
+checking check_type DXVA_PicParams_VP9 dxva.h... no
+checking check_type DXGI_OUTDUPL_FRAME_INFO windows.h... no
+checking check_type DXGI_OUTDUPL_FRAME_INFO dxgi1_2.h... no
+checking check_type IDXGIOutput1 windows.h... no
+checking check_type IDXGIOutput1 dxgi1_2.h... no
+checking check_type IDXGIOutput5 windows.h... no
+checking check_type IDXGIOutput5 dxgi1_5.h... no
+checking check_type ID3D11VideoDecoder windows.h... no
+checking check_type ID3D11VideoDecoder d3d11.h... no
+checking check_type ID3D11VideoContext windows.h... no
+checking check_type ID3D11VideoContext d3d11.h... no
+checking check_type ID3D12Device windows.h... no
+checking check_type ID3D12Device d3d12.h... no
+checking check_type ID3D12VideoDecoder windows.h... no
+checking check_type ID3D12VideoDecoder d3d12video.h... no
+checking check_type ID3D12VideoEncoder windows.h... no
+checking check_type ID3D12VideoEncoder d3d12video.h... no
+checking check_type ID3D12VideoProcessor windows.h... no
+checking check_type ID3D12VideoProcessor d3d12video.h... no
+checking check_type ID3D12VideoMotionEstimator windows.h... no
+checking check_type ID3D12VideoMotionEstimator d3d12video.h... no
+checking check_type ID3D12VideoMotionEstimator windows.h... no
+checking check_type ID3D12VideoMotionEstimator d3d12video.h... no
+checking check_type ID3D12VideoMotionEstimator windows.h... no
+checking check_type ID3D12VideoMotionEstimator d3d12video.h... no
+checking check_type ID3D12VideoMotionEstimator windows.h... no
+checking check_type ID3D12VideoMotionEstimator d3d12video.h... no
+checking check_type ID3D12VideoMotionEstimator windows.h... no
+checking check_type ID3D12VideoMotionEstimator d3d12video.h... no
+checking check_type ID3D12VideoMotionEstimator windows.h... no
+checking check_type ID3D12VideoMotionEstimator d3d12video.h... no
+checking check_type SecPkgContext_KeyingMaterialInfo windows.h... no
+checking check_type SecPkgContext_KeyingMaterialInfo security.h... no
+checking check_type SecPkgContext_KeyingMaterialInfo schnlsp.h... no
+checking check_type DXVA2_ConfigPictureDecode d3d9.h... no
+checking check_type DXVA2_ConfigPictureDecode dxva2api.h... no
+checking check_func_headers mfapi.h... no
+checking check_func_headers MFCreateAlignedMemoryBuffer... no
+checking check_type __x_ABI_CWindows_CGraphics_CCapture_CIGraphicsCaptureSession3 windows.h... no
+checking check_type __x_ABI_CWindows_CGraphics_CCapture_CIGraphicsCaptureSession3 windows.graphics.capture.h... no
+checking check_type __x_ABI_CWindows_CGraphics_CCapture_CIGraphicsCaptureSession5 windows.h... no
+checking check_type __x_ABI_CWindows_CGraphics_CCapture_CIGraphicsCaptureSession5 windows.graphics.capture.h... no
+checking check_type IGraphicsCaptureItemInterop windows.h... no
+checking check_type IGraphicsCaptureItemInterop windows.graphics.capture.interop.h... no
+checking check_type IDirect3DDxgiInterfaceAccess windows.h... no
+checking check_type IDirect3DDxgiInterfaceAccess windows.graphics.directx.direct3d11.interop.h... no
+checking check_type IDirect3DDxgiInterfaceAccess windows.h... yes
+checking check_type IDirect3DDxgiInterfaceAccess windows.graphics.directx.direct3d11.interop.h... yes
+checking test_cpp ... no
+checking check_func_headers windows.h... no
+checking check_func_headers process.h... no
+checking check_func_headers _beginthreadex... no
+checking check_func_headers bzlib.h... yes
+checking check_func_headers BZ2_bzlibVersion... yes
+checking check_func_headers lzma.h... yes
+checking check_func_headers lzma_version_number... yes
+checking check_func_headers dlfcn.h... yes
+checking check_func_headers dlopen... yes
+checking check_func_headers dlsym... yes
+checking check_func_headers dlfcn.h... yes
+checking check_func_headers dlopen... yes
+checking check_func_headers dlsym... yes
+checking check_func_headers math.h... yes
+checking check_func_headers sin... yes
+checking check_func_headers math.h... yes
+checking check_func_headers sin... yes
+checking test_ld cc... yes
+checking test_ld cc... yes
+checking test_ld cc... yes
+checking test_ld cc... yes
+checking test_ld cc... yes
+checking test_ld cc... yes
+checking test_ld cc... yes
+checking test_ld cc... yes
+checking test_ld cc... yes
+checking test_ld cc... yes
+checking test_ld cc... yes
+checking test_ld cc... yes
+checking test_ld cc... yes
+checking test_ld cc... yes
+checking test_ld cc... yes
+checking test_ld cc... yes
+checking test_ld cc... yes
+checking test_ld cc... yes
+checking test_ld cc... yes
+checking test_ld cc... yes
+checking test_ld cc... yes
+checking test_ld cc... yes
+checking test_ld cc... yes
+checking test_ld cc... yes
+checking test_ld cc... yes
+checking test_ld cc... yes
+checking test_ld cc... yes
+checking test_ld cc... yes
+checking test_ld cc... no
+checking test_cc ... yes
+checking test_cc ... no
+checking check_cc v4l2_m2m... yes
+checking check_cc v4l2_m2m... yes
+checking check_cc v4l2_m2m... yes
+checking check_cc v4l2_m2m... yes
+checking check_cc v4l2_m2m... yes
+checking check_cc v4l2_m2m... yes
+checking check_cc v4l2_m2m... yes
+checking check_cc v4l2_m2m... yes
+checking check_cc v4l2_m2m... yes
+checking check_cc v4l2_m2m... yes
+checking check_cc v4l2_m2m... no
+checking check_func_headers windows.h... no
+checking check_func_headers winuser.h... no
+checking check_func_headers GetShellWindow... no
+checking check_func_headers windows.h... no
+checking check_func_headers vfw.h... no
+checking check_func_headers capCreateCaptureWindow... no
+checking check_func_headers windows.h... no
+checking check_func_headers vfw.h... no
+checking check_func_headers capCreateCaptureWindow... no
+checking check_struct audio_buf_info.bytes sys/soundcard.h... yes
+checking check_struct audio_buf_info.bytes sys/soundcard.h... no
+checking check_func_headers alsa/asoundlib.h... no
+checking check_func_headers snd_pcm_htimestamp... no
+checking check_func_headers alsa/asoundlib.h... no
+checking check_func_headers snd_pcm_htimestamp... no
+checking check_func_headers xcb/xcb.h... yes
+checking check_func_headers xcb_connect... yes
+checking check_func_headers windows.h... no
+checking check_func_headers CreateDIBSection... no
+checking check_func_headers windows.h... no
+checking check_func_headers CreateDIBSection... no
+checking test_cpp ... no
+checking test_cpp ... no
+checking test_cpp ... no
+checking check_func_headers iconv.h... yes
+checking check_func_headers iconv... yes
+checking check_func_headers iconv.h... yes
+checking check_func_headers iconv... yes
+checking check_func_headers iconv.h... yes
+checking check_func_headers iconv... yes
+checking check_cxxflags -Wall... yes
+checking check_objcflags -Wall... no
+checking check_allcflags -Wdisabled-optimization... yes
+checking check_cxxflags -Wdisabled-optimization... yes
+checking check_objcflags -Wdisabled-optimization... no
+checking check_allcflags -Wpointer-arith... yes
+checking check_cxxflags -Wpointer-arith... yes
+checking check_objcflags -Wpointer-arith... no
+checking check_allcflags -Wredundant-decls... yes
+checking check_cxxflags -Wredundant-decls... yes
+checking check_objcflags -Wredundant-decls... no
+checking check_allcflags -Wwrite-strings... yes
+checking check_cxxflags -Wwrite-strings... yes
+checking check_objcflags -Wwrite-strings... no
+checking check_allcflags -Wtype-limits... yes
+checking check_cxxflags -Wtype-limits... yes
+checking check_objcflags -Wtype-limits... no
+checking check_allcflags -Wundef... yes
+checking check_cxxflags -Wundef... yes
+checking check_objcflags -Wundef... no
+checking check_allcflags -Wempty-body... yes
+checking check_cxxflags -Wempty-body... yes
+checking check_objcflags -Wempty-body... no
+checking check_cflags -Wmissing-prototypes... yes
+checking check_cflags -Wstrict-prototypes... yes
+checking test_cc -Werror=unused-command-line-argument... no
+checking test_cc -Werror=unknown-warning-option... no
+checking check_disable_warning -Wno-parentheses... yes
+checking test_cxxflags -Werror... yes
+checking test_objcc -Wparentheses... no
+checking check_disable_warning -Wno-switch... yes
+checking test_cxxflags -Werror... yes
+checking test_objcc -Wswitch... no
+checking check_disable_warning -Wno-format-zero-length... yes
+checking test_cxxflags -Werror... yes
+checking test_objcc -Wformat-zero-length... no
+checking check_disable_warning -Wno-pointer-sign... yes
+checking test_cxxflags -Werror... no
+checking test_objcc -Wpointer-sign... no
+checking check_disable_warning -Wno-unused-const-variable... yes
+checking test_cxxflags -Werror... yes
+checking test_objcc -Wunused-const-variable... no
+checking check_disable_warning -Wno-bool-operation... yes
+checking test_cxxflags -Werror... yes
+checking test_objcc -Wbool-operation... no
+checking check_disable_warning -Wno-char-subscripts... yes
+checking test_cxxflags -Werror... yes
+checking test_objcc -Wchar-subscripts... no
+checking check_disable_warning -Wno-implicit-const-int-float-conversion... no
+checking test_cxxflags -Werror... no
+checking test_objcc -Wimplicit-const-int-float-conversion... no
+checking check_disable_warning -Wno-microsoft-enum-forward-reference... no
+checking test_cxxflags -Werror... no
+checking test_objcc -Wmicrosoft-enum-forward-reference... no
+checking check_disable_warning_headers -Wno-deprecated-declarations... yes
+checking check_disable_warning_headers -Wno-unused-variable... yes
+checking test_cc ... no
+checking check_ldflags -Wl,-rpath-link=:libswresample:libswscale:libavfilter:libavdevice:libavformat:libavcodec:libavutil... yes
+checking test_ldflags -Wl,-Bsymbolic... yes
+checking check_stripflags -x... yes
+checking check_ld cc... yes
+checking check_optflags ... yes
+checking check_cxxflags ... yes
+checking check_objcflags ... no
+checking check_optflags -fno-math-errno... yes
+checking check_cxxflags -fno-math-errno... yes
+checking check_objcflags -fno-math-errno... no
+checking check_optflags -fno-signed-zeros... yes
+checking check_cxxflags -fno-signed-zeros... yes
+checking check_objcflags -fno-signed-zeros... no
+checking test_cc -mno-red-zone... yes
+Threading is enabled, but no atomics are available
+
+If you think configure made a mistake, make sure you are using the latest
+version from Git.  If the latest version fails, report the problem to the
+ffmpeg-user@ffmpeg.org mailing list or IRC #ffmpeg on irc.libera.chat.
+Include the log file "ffbuild/config.log" produced by configure as this will help
+solve the problem.

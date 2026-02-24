@@ -26,6 +26,7 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 
 # Include configuration generated from config.mak
 include(ffbuild/config.cmake)
+include(ffbuild/platform.cmake)
 
 include(CheckSymbolExists)
 include(CheckIncludeFile)
